@@ -1,0 +1,90 @@
+---
+title: "Getting Started"
+description: "Install and run Lifeverse AI for your organization"
+---
+
+## Prerequisites
+
+| Requirement | Version |
+|------------|---------|
+| Python | 3.10+ |
+| Node.js | 18+ (for dashboards) |
+| SQLite | 3.35+ (FTS5 support) |
+| Claude Code | Latest |
+| Git | 2.30+ |
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/metaweavehq/lifeverse-ai.git
+cd lifeverse-ai
+```
+
+### 2. Run the installer
+
+```bash
+python3 install.py
+```
+
+This creates:
+- SQLite databases for each agent
+- Agent configuration files
+- Daemon scheduler setup
+- Skill library initialization
+- A2A messaging infrastructure
+
+### 3. Validate
+
+```bash
+python3 validate_system.py
+```
+
+All checks should pass.
+
+### 4. Check health
+
+```bash
+python3 daemon/health_dashboard.py
+```
+
+## Your first agent interaction
+
+```bash
+# Check agent status
+python3 scripts/agent_status.py
+
+# Send a test message to the CEO agent
+python3 -c "
+from lib.a2a import send_message
+send_message(
+    to='ceo',
+    subject='Hello from the Foundation',
+    body='Lifeverse AI is online. All agents ready.',
+    priority='normal'
+)
+"
+```
+
+## Configuration
+
+Edit these files to customize for your organization:
+
+| File | Purpose |
+|------|---------|
+| `config/agents.yaml` | Agent roles, teams, and authority levels |
+| `config/daemon.yaml` | Execution schedules |
+| `config/fleet.yaml` | Vessel definitions (maritime) |
+| `config/skills.yaml` | Available skills per agent |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Build custom agents" icon="robot" href="/guides/building-agents">
+    Create agents tailored to your operations.
+  </Card>
+  <Card title="Deploy to production" icon="rocket" href="/guides/deployment">
+    Move from local development to production.
+  </Card>
+</CardGroup>

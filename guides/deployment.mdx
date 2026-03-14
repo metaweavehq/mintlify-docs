@@ -1,0 +1,100 @@
+---
+title: "Deployment"
+description: "Deploy Lifeverse AI to production"
+---
+
+## Deployment options
+
+| Option | Best for | Complexity |
+|--------|---------|-----------|
+| **Local** | Development, testing | Low |
+| **Single server** | Small deployments (1-5 agents) | Medium |
+| **Cloud** | Production with full agent teams | Medium-high |
+
+## Local deployment
+
+```bash
+# Start the daemon (runs all agents on schedule)
+python3 daemon/start.py
+
+# Or run a single agent manually
+python3 scripts/run_agent.py --agent ceo
+```
+
+## Production deployment
+
+### Infrastructure
+
+| Component | Recommendation |
+|-----------|---------------|
+| Compute | Any Linux/macOS server with Python 3.10+ |
+| Agent memory | Local SQLite (per-agent databases) |
+| Application data | Google Cloud SQL or PostgreSQL |
+| Time-series data | MongoDB Atlas |
+| Dashboards | Vercel, Cloud Run, or any Node.js host |
+
+### Environment setup
+
+```bash
+# Required environment variables
+ANTHROPIC_API_KEY=your-api-key
+DATABASE_URL=your-production-database
+MONGODB_URI=your-mongodb-connection
+
+# Optional
+LOG_LEVEL=INFO
+MAX_CONCURRENT_AGENTS=3
+HEALTH_CHECK_INTERVAL=300
+```
+
+### Daemon configuration
+
+```yaml
+# config/daemon.yaml (production)
+daemon:
+  check_interval: 60
+  max_concurrent_agents: 3
+  health_check_interval: 300
+  log_level: INFO
+  error_notification: hello@yourcompany.com
+```
+
+### Deploy dashboards
+
+```bash
+cd dashboards/your-dashboard
+npm run build
+npm start
+```
+
+## Monitoring
+
+Essential metrics to track:
+
+- **Agent health** — are agents executing on schedule?
+- **API usage** — Anthropic token consumption and costs
+- **Memory growth** — SQLite database sizes over time
+- **Message backlog** — unprocessed A2A messages
+- **Error rates** — failed agent executions
+
+```bash
+# Health dashboard
+python3 daemon/health_dashboard.py
+
+# Agent status report
+python3 scripts/agent_status.py --detailed
+```
+
+## Backup
+
+```bash
+# Backup all agent brains
+python3 scripts/backup_brains.py --output /path/to/backup/
+
+# Backup knowledge library
+python3 scripts/backup_knowledge.py --output /path/to/backup/
+```
+
+<Warning>
+Back up agent SQLite databases regularly. These contain all agent memory and context — losing them means agents start from scratch.
+</Warning>

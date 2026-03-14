@@ -1,0 +1,73 @@
+---
+title: "Lifeverse AI"
+description: "Open source multi-agent AI operating system"
+---
+
+## Overview
+
+Lifeverse AI is the flagship project of the Applied AI Foundation — an open source multi-agent operating system designed for industries that need persistent, collaborative, autonomous AI.
+
+Built in partnership with [MetaWeave Consulting](https://metaweave.in), currently deployed in maritime shipping operations.
+
+```bash
+git clone https://github.com/metaweavehq/lifeverse-ai.git
+```
+
+## Why Lifeverse AI?
+
+| Traditional AI | Lifeverse AI |
+|---------------|-------------|
+| Single chatbot | Multiple specialized agents |
+| Stateless sessions | Persistent memory across sessions |
+| Human-triggered | Autonomous daemon-scheduled execution |
+| Generic knowledge | Domain-specific expertise per agent |
+| Isolated operation | Inter-agent collaboration via A2A |
+
+## Core capabilities
+
+<CardGroup cols={2}>
+  <Card title="Agent brains" icon="brain">
+    14-table SQLite database per agent. Tasks, messages, knowledge, decisions, reflections — everything persists.
+  </Card>
+  <Card title="Sleep/wake model" icon="moon">
+    Agents save context before session ends and restore it on next wake. No information is lost.
+  </Card>
+  <Card title="A2A messaging" icon="messages">
+    Agent-to-Agent protocol for direct messages, team broadcasts, escalations, and urgent shouts.
+  </Card>
+  <Card title="Daemon scheduling" icon="clock">
+    Configurable cron-based execution. Agents run on schedule without human intervention.
+  </Card>
+  <Card title="Skill library" icon="toolbox">
+    Extensible slash-command system. Add custom skills for your domain-specific operations.
+  </Card>
+  <Card title="Organization learning" icon="graduation-cap">
+    Shared knowledge library. When one agent learns, every agent benefits.
+  </Card>
+</CardGroup>
+
+## Architecture
+
+```
+lifeverse-ai/
+├── daemon/       # Agent scheduler + health monitoring
+├── hooks/        # Session lifecycle (sleep/wake/compact)
+├── skills/       # Slash-command skill library
+├── lib/          # Shared utilities + A2A messaging
+├── schema/       # 14-table agent brain schema
+├── tests/        # Test suite
+├── scripts/      # Setup + maintenance tools
+└── wall/         # Shared knowledge board
+```
+
+## Current status
+
+- **Version**: Production
+- **Agents**: 27 specialized agents across 6 teams
+- **Tests**: Full test suite passing
+- **Deployments**: Active in maritime fleet management
+- **License**: MIT
+
+<Card title="Quick start guide" icon="rocket" href="/guides/getting-started" horizontal>
+  Install and run Lifeverse AI in minutes.
+</Card>

@@ -1,0 +1,108 @@
+---
+title: "Building Agents"
+description: "Create custom agents for your organization"
+---
+
+## Agent definition
+
+Every agent needs a role definition in `config/agents.yaml`:
+
+```yaml
+agents:
+  - id: your-agent-id
+    role: Your Agent Role
+    team: your-team
+    authority: mid          # low, mid, mid-high, high, highest
+    description: "What this agent does"
+    schedule: "*/30 * * * *"  # Cron expression
+    skills:
+      - skill-1
+      - skill-2
+```
+
+## Agent brain
+
+Each agent gets a 14-table SQLite database automatically. Run:
+
+```bash
+python3 scripts/init_brain.py --agent your-agent-id
+```
+
+This creates a database with tables for:
+- Tasks, messages, knowledge, decisions
+- Reflections, relationships, context
+- Calendar, incidents, metrics
+- Skills, preferences, wall posts, recovery
+
+## Custom skills
+
+Create domain-specific skills:
+
+```python
+# skills/custom/your_skill.py
+
+def your_command(agent_context, **kwargs):
+    """Describe what this skill does."""
+    # Access agent memory
+    knowledge = agent_context.query_knowledge("relevant topic")
+
+    # Perform the action
+    result = do_something(knowledge)
+
+    # Store the result
+    agent_context.add_knowledge(
+        category="operational",
+        subject="Result of action",
+        content=result
+    )
+
+    return result
+```
+
+Register in `config/skills.yaml`:
+
+```yaml
+skills:
+  - name: your-skill
+    module: skills.custom.your_skill
+    commands:
+      - /your-command
+    agents:
+      - your-agent-id
+```
+
+## Communication setup
+
+Define how your agent communicates:
+
+```yaml
+# In agents.yaml
+  - id: your-agent-id
+    communicates_with:
+      - manager-agent      # Can message directly
+      - team-lead-agent    # Can message directly
+    escalates_to: manager-agent  # Auto-escalation target
+    team: your-team        # Receives team broadcasts
+```
+
+## Testing
+
+Test your agent's behavior:
+
+```bash
+# Run agent in test mode (no side effects)
+python3 scripts/test_agent.py --agent your-agent-id
+
+# Verify brain schema
+python3 scripts/verify_brain.py --agent your-agent-id
+
+# Send test message and check response
+python3 scripts/test_a2a.py --from test --to your-agent-id --subject "Test message"
+```
+
+## Best practices
+
+- **Start simple** — define the core role before adding skills
+- **Test communication** — verify A2A messaging works before enabling daemon scheduling
+- **Monitor memory** — check that the agent is storing relevant knowledge, not noise
+- **Set appropriate authority** — start with lower authority and increase as the agent proves reliable
