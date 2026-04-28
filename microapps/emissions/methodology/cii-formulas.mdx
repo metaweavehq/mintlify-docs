@@ -1,0 +1,108 @@
+---
+title: "CII formulas"
+description: "Reference-line formula, ship-type constants, rating boundaries, and reduction factors used by the CII engine."
+---
+
+This page documents the exact formulas and constants used in `src/lib/utils/ciiCalculator.ts`.
+
+## Reference CII
+
+```
+CII_ref = a × Capacity^(-c)
+```
+
+Capacity is **DWT** for cargo and tanker types, **GT** for cruise ships. Constants are taken from IMO MEPC.354(78).
+
+| Ship type | Capacity | a | c |
+|---|---|---|---|
+| Container | DWT | 1,984 | 0.489 |
+| Bulk Carrier | DWT | 4,745 | 0.622 |
+| Tanker | DWT | 5,247 | 0.610 |
+| Gas Carrier | DWT | 14,405 | 0.807 |
+| LNG Carrier | DWT | 9,827 | 0.718 |
+| General Cargo | DWT | 588 | 0.388 |
+| Ro-Ro | DWT | 2,023 | 0.460 |
+| Cruise | GT | 930 | 0.383 |
+
+Vessel type strings from the database are normalised case-insensitively and matched against synonyms (e.g. "Crude Oil Tanker" → `TANKER`, "Car Carrier" → `RO_RO`).
+
+## Required CII
+
+```
+Required CII = Reference CII × (1 − reduction_factor)
+```
+
+Reduction factors per MEPC.338(76):
+
+| Year | Reduction |
+|---|---|
+| 2019 | 0% (baseline) |
+| 2020 | 1% |
+| 2021 | 2% |
+| 2022 | 3% |
+| 2023 | 5% |
+| 2024 | 7% |
+| 2025 | 9% |
+| 2026 | 11% |
+| 2027 | 13% |
+| 2028 | 15% |
+| 2029 | 17% |
+| 2030 | 19% |
+| 2031+ | 19% + 2% per year (extrapolation) |
+
+## Attained CII
+
+```
+Attained CII = (Total CO₂ in grams) / (Capacity × Distance NM)
+```
+
+CO₂ is supplied in tonnes and converted internally (`× 1,000,000`).
+
+## Rating boundaries
+
+Ratings A–E are determined by multiplying the Required CII by ship-type-specific d-factors (boundary multipliers from MEPC.354(78)):
+
+| Ship type | d1 (A) | d2 (B) | d3 (C) | d4 (D) |
+|---|---|---|---|---|
+| Container | 0.83 | 0.94 | 1.07 | 1.19 |
+| Bulk Carrier | 0.86 | 0.94 | 1.06 | 1.18 |
+| Tanker | 0.82 | 0.93 | 1.08 | 1.28 |
+| Gas Carrier | 0.81 | 0.91 | 1.12 | 1.44 |
+| LNG Carrier | 0.89 | 0.98 | 1.06 | 1.13 |
+| General Cargo | 0.83 | 0.94 | 1.06 | 1.19 |
+| Ro-Ro | 0.66 | 0.90 | 1.11 | 1.37 |
+| Cruise | 0.87 | 0.95 | 1.06 | 1.16 |
+
+```
+Rating boundary X = Required CII × d_X
+```
+
+A rating is the **highest band** that the Attained CII fits within:
+
+- Attained ≤ d1 × Required → **A**
+- Attained ≤ d2 × Required → **B**
+- Attained ≤ d3 × Required → **C** (this is the compliance threshold)
+- Attained ≤ d4 × Required → **D**
+- Otherwise → **E**
+
+## Compliance margin
+
+```
+Compliance margin = Required CII − Attained CII
+```
+
+Positive margin = the ship is below the required line (good). The compliance status is `COMPLIANT` if Attained ≤ Required, otherwise `NON_COMPLIANT`.
+
+## Implementation
+
+`src/lib/utils/ciiCalculator.ts` — exports `calculateCII`, `calculateCIISafe`, `calculateCIIWithReeferCorrection`, and `calculateCIIWithReeferCorrectionSafe`.
+
+Safe variants return `null` instead of throwing when inputs are missing — used throughout the app where data quality varies by vessel.
+
+## Reference
+
+- [IMO MEPC.353(78)](https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/MEPCDocuments/MEPC.353(78).pdf) — Reference lines (a, c coefficients)
+- [IMO MEPC.354(78)](https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/MEPCDocuments/MEPC.354(78).pdf) — Rating boundaries (d-vector values)
+- [IMO MEPC.339(76)](https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/MEPCDocuments/MEPC.339(76).pdf) — AER/CII calculation guidelines and reduction factors
+- [Reefer correction](/methodology/reefer-correction) — MEPC.355(78)
+- [Open-IMO-CII-Calculator](https://github.com/Open-IMO/Open-IMO-CII-Calculator) — open-source reference implementation

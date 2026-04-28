@@ -1,0 +1,91 @@
+---
+title: "EU ETS"
+description: "How the EU Emissions Trading System applies to shipping, and how the platform tracks coverage and cost."
+---
+
+## What it is
+
+EU ETS (Emissions Trading System) puts a price on carbon. From 2024 it covers maritime CO₂ on voyages touching EU/EEA ports. Each tonne of covered CO₂ requires the surrender of one EUA (EU Allowance), purchased at market rate.
+
+## Who it applies to
+
+Cargo and passenger ships **5,000 GT and above** calling at EU/EEA ports — under Directive 2003/87/EC as amended by Directive (EU) 2023/959.
+
+## Two factors determine your bill
+
+### 1. Voyage coverage by leg type
+
+Each voyage leg is classified by its endpoints:
+
+| Leg type | Departure | Arrival | Coverage |
+|---|---|---|---|
+| **INTRA_EU** | EU/EEA port | EU/EEA port | 100% |
+| **INTO_EU** | Non-EU port | EU/EEA port | 50% |
+| **OUT_OF_EU** | EU/EEA port | Non-EU port | 50% |
+| **NON_EU** | Non-EU port | Non-EU port | 0% |
+
+Time spent **at port** is also classified per-record: emissions at an EU port are 100% covered; emissions at a non-EU port are 0% covered — even within the same voyage.
+
+### 2. Phase-in factor by year
+
+Maritime ETS is phased in over three years:
+
+| Year | Phase-in |
+|---|---|
+| 2024 | 40% |
+| 2025 | 70% |
+| 2026 onwards | 100% |
+
+So your final ETS exposure is:
+
+```
+ETS Emissions = Σ (Leg CO₂ × Coverage Factor) × Phase-In Factor
+ETS Cost      = ETS Emissions × EUA Price
+```
+
+The default EUA price is configurable via the `DEFAULT_EUA_PRICE` environment variable (defaults to €75/tonne).
+
+## What the platform calculates
+
+For every voyage, the platform:
+
+1. Walks the consumption log chronologically
+2. Detects each **BOSP** (Beginning of Sea Passage) event as a leg boundary
+3. Splits each record into sea CO₂ vs. port CO₂ vs. EU-port CO₂ vs. non-EU-port CO₂
+4. Applies the leg's coverage factor to sea CO₂; applies 100% / 0% per-record to port CO₂
+5. Sums covered CO₂ across all legs and multiplies by the year's phase-in factor
+
+This per-leg approach is more accurate than treating the whole voyage as one classification — a Rotterdam → Hamburg → Le Havre → Singapore voyage produces three intra-EU legs (100%) and one out-of-EU leg (50%), not one blended figure.
+
+## What you see in the product
+
+<Frame caption="EU ETS dashboard — phase-in banner, voyage classification, and leg-level coverage.">
+  <img src="/images/eu-ets/hero.png" alt="EU ETS dashboard" />
+</Frame>
+
+- **Fleet view**: Phase-in banner highlighting the current year, voyage-type breakdown, and total cost projection
+- **Vessel view**: Expandable voyages table showing each leg's coverage factor and covered CO₂
+- **Reports**: Downloadable EU ETS report for verifier submission
+
+## Reference
+
+### Primary regulations
+
+- [Directive 2003/87/EC (consolidated)](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02003L0087-20240101) — EU ETS directive including maritime provisions
+- [Directive (EU) 2023/959](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L0959) — Amendment that brought maritime into EU ETS
+- [Regulation (EU) 2015/757 (consolidated)](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02015R0757-20240101) — EU MRV (the data feed for ETS)
+
+### Industry guides
+
+- [DNV — EU ETS Maritime](https://www.dnv.com/maritime/insights/topics/eu-emissions-trading-system-ets/)
+- [CE Delft — FuelEU Maritime and EU ETS Report](https://cedelft.eu/publications/eu-ets-and-fueleu-maritime/)
+- [Sustainable Ships — EU ETS Maritime Guide](https://www.sustainableships.org/eu-ets-maritime/)
+
+### Carbon market data
+
+- [ICAP ETS Map](https://icapcarbonaction.com/en/ets) — global ETS overview
+- [Ember Carbon Price Tracker](https://ember-climate.org/data/data-tools/carbon-price-viewer/) — live EUA price
+
+### In this documentation
+
+- [Methodology: EU ETS coverage formulas](/methodology/eu-ets-coverage)

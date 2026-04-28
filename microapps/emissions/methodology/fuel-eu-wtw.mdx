@@ -1,0 +1,122 @@
+---
+title: "FuelEU WtW"
+description: "Well-to-Wake intensity formulas, Annex II default factors, methane slip, and biofuel period dating."
+---
+
+`src/lib/utils/fuelEUCalculator.ts` implements EU Regulation 2023/1805 with Annex II default emission factors. This page documents the formulas and constants in use.
+
+## WtW = WtT + TtW
+
+```
+WtT (per fuel) = Annex II default value (gCO₂eq/MJ)
+TtW (per gram of fuel) = ttW_CO₂ × GWP_CO₂ + ttW_CH₄ × GWP_CH₄ + ttW_N₂O × GWP_N₂O
+TtW (per MJ)   = TtW per gram / LCV (MJ/g)
+WtW            = WtT + TtW per MJ (gCO₂eq/MJ)
+```
+
+Global warming potentials use **AR5** values:
+
+| Gas | GWP |
+|---|---|
+| CO₂ | 1 |
+| CH₄ | 28 |
+| N₂O | 265 |
+
+## Annex II default factors
+
+The platform supports 19 fuel types. Key conventional and alternative fuels:
+
+| Fuel | LCV (MJ/g) | WtT (gCO₂eq/MJ) | TtW CO₂ (g/g) | TtW CH₄ (g/g) | TtW N₂O (g/g) |
+|---|---|---|---|---|---|
+| HFO | 0.0405 | 13.5 | 3.114 | 0.00005 | 0.00018 |
+| LFO | 0.0410 | 13.2 | 3.151 | 0.00005 | 0.00018 |
+| MDO | 0.0427 | 14.4 | 3.206 | 0.00006 | 0.00018 |
+| MGO | 0.0427 | 14.4 | 3.206 | 0.00006 | 0.00018 |
+| LNG (Otto MS) | 0.0491 | 18.5 | 2.750 | 0.031 | 0.00011 |
+| Methanol (fossil) | 0.0199 | 31.3 | 1.375 | 0.00012 | 0.00002 |
+| LPG (Propane) | 0.0461 | 7.5 | 3.030 | 0.00005 | 0.00018 |
+| LPG (Butane) | 0.0455 | 8.4 | 3.030 | 0.00005 | 0.00018 |
+
+Biofuels (TtW CO₂ counted as 0 — biogenic):
+
+| Fuel | LCV | WtT | Notes |
+|---|---|---|---|
+| FAME | 0.037 | 21.0 | Average across feedstocks |
+| HVO | 0.044 | 10.0 | Certified sustainable |
+| Bio-Methanol | 0.0199 | 7.6 | Waste-based pathway |
+| Bio-LNG | 0.0491 | 7.5 | Waste/manure |
+| Bio-Blend | 0.040 | 18.0 | Blended; partial biogenic content |
+
+E-fuels:
+
+| Fuel | LCV | WtT |
+|---|---|---|
+| E-Methanol (Green) | 0.0199 | 3.0 |
+| E-LNG | 0.0491 | 5.0 |
+
+Ammonia and Hydrogen:
+
+| Fuel | LCV | WtT | TtW N₂O |
+|---|---|---|---|
+| Ammonia (Grey) | 0.0186 | 121.0 | 0.008 |
+| Ammonia (Green) | 0.0186 | 5.0 | 0.008 |
+| Hydrogen (Grey) | 0.120 | 132.0 | — |
+| Hydrogen (Green) | 0.120 | 5.0 | — |
+
+## LNG methane slip
+
+For LNG and Bio-LNG, methane slip (`ttW_CH₄`) varies by engine:
+
+| Engine | Slip (Cslip) |
+|---|---|
+| Otto medium-speed | 3.1% (default) |
+| Otto slow-speed | 1.7% |
+| Diesel | 0.2% |
+| LBSI (lean-burn spark-ignition) | 2.6% |
+
+The platform defaults to Otto medium-speed unless engine type is supplied.
+
+## Biofuel period dating
+
+Bio-Blend bunkers are dated against the user's certification records. Two periods exist with different certified WtW intensities:
+
+| Period | Cf (t CO₂ / t fuel) | WtW (gCO₂eq/MJ) |
+|---|---|---|
+| Pre-8-Aug-2025 | 2.331 | 9.2 |
+| Post-8-Aug-2025 | 2.502 | 10.8 |
+
+Cutoff: **8 August 2025** (FIFO consumption assumption). Consumption before the cutoff uses the earlier bunker; after, the later one.
+
+## Fleet GHG intensity
+
+```
+Fleet GHG Intensity = Σ (Energy_i × WtW_i) / Σ Energy_i
+```
+
+Energy is computed per fuel as `tonnes × 1,000,000 × LCV`.
+
+## Targets and compliance
+
+```
+Target intensity (year)  = step function from {2020 baseline, 2025, 2030, ..., 2050}
+Compliance Balance       = (Target − Actual) × Total Energy   (in gCO₂eq)
+Compliance status        = COMPLIANT if Actual ≤ Target else NON_COMPLIANT
+Penalty (€)              = |Balance| / Actual × (€2,400 / 41,000 MJ)
+```
+
+The penalty divides by Actual to convert the gCO₂eq gap into MJ of energy at the actual intensity, then values that energy at €2,400 per tonne of VLSFO equivalent (41,000 MJ).
+
+Targets are step-wise: the 2025 target (89.34) applies through 2029, then drops at 2030. Years before 2025 use the baseline (91.16).
+
+## Implementation
+
+`src/lib/utils/fuelEUCalculator.ts` — exports include `calculateWtW`, `calculateFleetGHGIntensity`, `calculateFuelEUCompliance`, `calculateFuelEUComplianceWithBiofuelPeriods`, and the `FUEL_FACTORS`, `LNG_CSLIP`, `GWP`, `GHG_TARGETS`, `BIOFUEL_EMISSION_FACTORS` constants.
+
+## Reference
+
+- [Regulation (EU) 2023/1805](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32023R1805) — FuelEU Maritime
+- [Annex II default emission factors](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32023R1805#d1e32-94-1) — WtT, TtW, LCV for every supported fuel
+- [IPCC AR5 GWP values](https://www.ipcc.ch/assessment-report/ar5/) — CH₄ = 28, N₂O = 265
+- [DNV — FuelEU Maritime](https://www.dnv.com/maritime/insights/topics/fueleu-maritime/)
+- [CE Delft technical report](https://cedelft.eu/publications/eu-ets-and-fueleu-maritime/)
+- [Sustainable Ships — FuelEU penalty calculator](https://www.sustainableships.org/fueleu-maritime/)

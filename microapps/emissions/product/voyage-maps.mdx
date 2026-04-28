@@ -1,0 +1,62 @@
+---
+title: "Voyage maps"
+description: "Interactive map view of vessel routes with voyage-level filtering and table sync."
+---
+
+The Maps page lets you see where a vessel actually went. Position records from the consumption log are plotted on a Mapbox GL map, coloured by voyage, with a legend that filters both the map and the table beneath it.
+
+<Frame caption="Voyage maps — Mapbox view with voyage legend on the right and consumption table below.">
+  <img src="/images/maps/hero.png" alt="Voyage maps hero" />
+</Frame>
+
+## What's on the page
+
+### Vessel selector + year
+
+A dropdown picks the vessel; the global year selector picks the year. Together they scope the position data shown.
+
+### Map (Mapbox GL)
+
+<Frame caption="Map with all voyages drawn. Each voyage gets a unique colour from a 5-colour palette.">
+  <img src="/images/maps/map-all-voyages.png" alt="Map with all voyages" />
+</Frame>
+
+Position points are connected into routes, one route per voyage. Five colours rotate from the brand palette (magenta, green, orange, purple, cyan). The map auto-fits to the vessel's full coverage on selection. A position-count badge tells you how many records are plotted.
+
+### Voyage legend
+
+<Frame caption="Voyage legend — click to isolate a voyage on the map and table.">
+  <img src="/images/maps/legend-isolated.png" alt="Voyage legend with one voyage isolated" />
+</Frame>
+
+The right-hand legend lists every voyage in the data with:
+
+- Colour indicator
+- Voyage name / number
+- Position count
+- "Selected" badge when active
+
+Click an item to isolate that voyage on the map (others fade to 40% opacity) and to filter the table below. Click again or use the **Clear** button to reset.
+
+### Voyage table (synced)
+
+<Frame caption="Voyage table beneath the map. Selecting a voyage on the map filters this table; clicking a row here highlights the legend.">
+  <img src="/images/maps/voyage-table.png" alt="Synced voyage table" />
+</Frame>
+
+A paginated table (10 rows per page) showing voyage number, route, period, distance, CO₂, average CII, EU ETS type, and ETS cost. The colour dot on each row matches the legend; clicking a row highlights it on the legend (and vice versa).
+
+## What you can do here
+
+- Visually verify that a voyage was sailed where expected
+- Trace a high-emissions voyage to its actual route
+- Compare voyages by distance, fuel use, or ETS exposure side-by-side
+- Use this view in customer/audit conversations as a more accessible alternative to a table
+
+## Tech note
+
+The map uses **Mapbox GL JS** via `react-map-gl`. There's also a Leaflet-based fallback (`VoyageMap`) available if Mapbox tiles fail to load.
+
+## Source
+
+Position data is read from `/api/vessels/[imo]/positions`. Voyage segmentation comes from `VoyageSegmentService`.

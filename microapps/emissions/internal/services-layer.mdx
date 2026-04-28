@@ -1,0 +1,75 @@
+---
+title: "Services layer"
+description: "Where the business logic lives — five services that every page and every report calls into."
+---
+
+Business logic does not live in API routes. API routes are thin wrappers. Logic lives in `src/lib/services/`.
+
+## The five services
+
+### `FleetService.ts`
+
+The big one. Aggregates fleet-wide metrics for the home page, EU ETS dashboard, and FuelEU dashboard. Methods include:
+
+- `getFleetSummary(year, ytd?)` — KPIs for the home page
+- `getFleetVessels(year)` — per-vessel metrics for the fleet table
+- `getFleetEmissionsDaily(year)` — daily timeline for the home page chart
+- `getEUETSCost(year)` — fleet-wide ETS cost projection
+- `getFuelEUCompliance(year)` — fleet-wide GHG intensity, balance, penalty
+
+Has a 30-second request-level cache for the expensive EU metrics queries.
+
+### `VoyageSegmentService.ts`
+
+Voyage segmentation used by **every page that touches voyages**. Methods:
+
+- `getVesselVoyageSegments(imo, year)` — list of segments with EU metrics, fuel breakdown, CII per segment
+- `getFleetVoyages(year)` — flat list of all segments across fleet for ETS dashboard
+
+Wraps `extractVoyageLegs()` from `portClassifier.ts` and adds caching and aggregation.
+
+### `VesselService.ts`
+
+Per-vessel reads:
+
+- `getVesselDetails(imo)` — header info
+- `getVesselAnnualSummary(imo, year)` — vessel detail page data
+- `getVesselCIIDaily(imo, year)` — rolling CII chart data
+- `getVesselPositions(imo, year)` — Maps page positions
+
+### `UploadService.ts`
+
+Two flows:
+
+- `previewUpload(buffer, vesselId)` — parse, validate, count duplicates, return preview
+- `commitUpload(buffer, vesselId)` — same parse + actual insert
+
+### `ReportExportService.ts`
+
+PDF generation for the five regulatory reports. Each method takes the same inputs the dashboard already has access to:
+
+- `generateIMODCS(imo, year)`
+- `generateCIIStatement(imo, year)`
+- `generateEUMRV(imo, year)`
+- `generateEUETSReport(year)` (fleet-level)
+- `generateFuelEUReport(year)` (fleet-level)
+
+## Why services, not API-route logic
+
+- **Reuse.** `VoyageSegmentService` is called from 4 different API routes. Putting logic in routes would mean copy-paste.
+- **Testability.** Services are pure-ish; routes are coupled to `Request`/`Response`.
+- **Same code path everywhere.** Reports use the same service the dashboard uses. No "report-time" recalculation drift.
+
+## Caching strategy
+
+`FleetService` has a 30-second in-process cache keyed on `year + ytd`. Multiple parallel requests during a single dashboard load (summary + vessels + emissions-daily) all hit the same cached intermediate computations.
+
+## Calculator utilities
+
+The services delegate the actual maths to pure utility files:
+
+- `src/lib/utils/ciiCalculator.ts`
+- `src/lib/utils/fuelEUCalculator.ts`
+- `src/lib/utils/portClassifier.ts`
+
+These are zero-dependency TypeScript modules — they're imported by services, by API routes, and by the methodology page's interactive calculators.

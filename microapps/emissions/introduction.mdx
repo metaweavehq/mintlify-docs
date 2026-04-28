@@ -1,0 +1,80 @@
+---
+title: "Maritime Emissions Dashboard"
+description: "Maritime emissions compliance for CII, EU ETS, FuelEU Maritime, EU MRV, and IMO DCS — in one dashboard."
+---
+
+<Card title="Try the live demo" icon="rocket" href="https://emissions-grrc--ildrgucx.apps.metaweave.in/?x-vercel-protection-bypass=ItrdifHwTIkDcePAkJxyr1fBRh2QZdlL&x-vercel-set-bypass-cookie=samesitenone" horizontal>
+  Open the dashboard in a new tab with our demo fleet preloaded — pick a year, drill into a vessel, and explore CII / EU ETS / FuelEU side by side.
+</Card>
+
+<Frame caption="Fleet overview — annual emissions, compliance status, and CII distribution at a glance.">
+  <img src="/images/hero/fleet-overview.png" alt="Fleet overview dashboard" />
+</Frame>
+
+## What is this?
+
+The Maritime Emissions Dashboard turns vessel consumption logs into the regulatory artefacts every shipowner now has to file: a CII rating, an EU ETS allowance bill, a FuelEU GHG-intensity statement, an EU MRV voyage report, and an IMO DCS submission.
+
+You upload your fleet's consumption data once. The platform computes everything, every regulation, every vessel, every voyage — and gives you the dashboards, drill-downs, and downloadable reports you need to operate and to file.
+
+## What it covers
+
+<CardGroup cols={2}>
+  <Card title="IMO CII" icon="leaf" href="/concepts/cii">
+    Carbon Intensity Indicator per MEPC.354(78). A–E ratings, attained vs. required, reefer correction per MEPC.355(78).
+  </Card>
+  <Card title="EU ETS" icon="building-columns" href="/concepts/eu-ets">
+    Voyage-by-voyage emissions classification, phase-in factors (40% / 70% / 100%), EUA cost projections.
+  </Card>
+  <Card title="FuelEU Maritime" icon="droplet" href="/concepts/fuel-eu">
+    Well-to-Wake GHG intensity across 19 fuel types. Compliance balance, penalty estimates, banking & pooling.
+  </Card>
+  <Card title="EU MRV + IMO DCS" icon="file-lines" href="/concepts/eu-mrv">
+    Voyage-level MRV data for THETIS-MRV and annual DCS submissions for your flag state.
+  </Card>
+</CardGroup>
+
+## What you can do with it
+
+<Steps>
+  <Step title="See the whole fleet at once">
+    A single year-selector drives the entire app. Every page — fleet overview, ETS, FuelEU, vessel detail — refreshes to the year you pick.
+  </Step>
+  <Step title="Drill from fleet to vessel to voyage to leg">
+    Click a row in the fleet table → land on the vessel page → expand a voyage → see leg-by-leg ETS coverage.
+  </Step>
+  <Step title="Watch trends, not just totals">
+    Daily timeline charts for CII, GHG intensity, and EU ETS exposure. Brush-to-zoom and target lines built in.
+  </Step>
+  <Step title="Generate the reports your auditors need">
+    One-click downloads for IMO DCS, CII Statement, EU MRV, EU ETS, and FuelEU — formatted for the right authority.
+  </Step>
+</Steps>
+
+## Who it's for
+
+The platform is built for shipping companies operating between 2 and 100+ vessels who need to comply with overlapping IMO and EU regulations without standing up a data-engineering team to do it.
+
+Typical users:
+
+- **Fleet managers** monitoring CII ratings and EU ETS exposure
+- **Environmental & compliance officers** preparing annual filings
+- **Commercial teams** modelling EUA costs into voyage P&L
+- **IT / digital teams** integrating the platform into broader fleet systems
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="5-minute tour" icon="bolt" href="/quickstart">
+    Walk through the dashboard end-to-end with screenshots.
+  </Card>
+  <Card title="Compliance frameworks" icon="scale-balanced" href="/concepts/compliance-overview">
+    Compare CII, EU ETS, FuelEU, EU MRV, and IMO DCS side by side.
+  </Card>
+  <Card title="Product tour" icon="map" href="/product/fleet-overview">
+    Page-by-page walkthrough of every screen.
+  </Card>
+  <Card title="Engineering reference" icon="code" href="/internal/architecture">
+    Tech stack, data flow, environment variables, local setup.
+  </Card>
+</CardGroup>

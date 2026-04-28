@@ -1,0 +1,92 @@
+---
+title: "EU ETS coverage"
+description: "Port classification, voyage segmentation, and per-leg coverage logic."
+---
+
+The EU ETS engine in `src/lib/utils/portClassifier.ts` and `src/lib/services/VoyageSegmentService.ts` produces per-leg covered CO₂ figures used everywhere in the app — fleet ETS dashboard, vessel detail voyages table, EU ETS report.
+
+## Port classification
+
+A port is classified **EU/EEA** if its UN/LOCODE country code (the first two letters) matches one of these 30 codes:
+
+```
+EU members:
+AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT
+LV LT LU MT NL PL PT RO SK SI ES SE
+
+EEA members (non-EU):
+IS LI NO
+```
+
+Anything else is non-EU.
+
+## Voyage type from leg endpoints
+
+| Departure | Arrival | Voyage type |
+|---|---|---|
+| EU/EEA | EU/EEA | INTRA_EU |
+| Non-EU | EU/EEA | INTO_EU |
+| EU/EEA | Non-EU | OUT_OF_EU |
+| Non-EU | Non-EU | NON_EU |
+
+## Coverage factors
+
+Applied only to **emissions at sea** during the leg:
+
+| Voyage type | Sea coverage |
+|---|---|
+| INTRA_EU | 100% |
+| INTO_EU | 50% |
+| OUT_OF_EU | 50% |
+| NON_EU | 0% |
+
+## Port emissions: per-record classification
+
+Emissions while **at port** are not tied to the voyage type. They're classified by the actual port LOCODE on each record:
+
+- EU port → 100% covered
+- Non-EU port → 0% covered
+
+This matters for multi-port voyages. Example: a voyage Rotterdam → Hamburg → Le Havre → Singapore has three intra-EU legs (100%) followed by an out-of-EU leg (50%). Time spent at the Hamburg and Le Havre intermediate stops is 100% covered; time at Singapore is 0%.
+
+## Phase-in factor by year
+
+| Year | Phase-in |
+|---|---|
+| 2023 and earlier | 0% |
+| 2024 | 40% |
+| 2025 | 70% |
+| 2026 onwards | 100% |
+
+## Final formula
+
+```
+Covered CO₂ (per leg) = (Sea CO₂ × Sea Coverage) + (EU-Port CO₂ × 1.0)
+ETS Emissions          = Σ Covered CO₂ (across legs) × Phase-In Factor
+ETS Cost (€)           = ETS Emissions × EUA Price
+```
+
+EUA price defaults to **€75/tonne** unless overridden via `DEFAULT_EUA_PRICE`.
+
+## Voyage segmentation (BOSP-based)
+
+The `extractVoyageLegs()` function walks consumption records chronologically and creates a new leg whenever it encounters a `BOSP` (Beginning of Sea Passage) event. Records before the first BOSP are buffered and attached to the first leg.
+
+This means:
+
+- A voyage with 4 BOSP events produces 4 legs
+- Repeated voyage numbers (e.g. `99W, 99E, 99W`) are split into segments (`99W-1`, `99E-1`, `99W-2`)
+- Coverage is applied per leg, not per voyage
+
+## Implementation
+
+- `src/lib/utils/portClassifier.ts` — `isEUPort`, `determineVoyageType`, `getETSCoverageFactor`, `getETSPhaseInFactor`, `extractVoyageLegs`, `calculateLegsETSEmissions`
+- `src/lib/services/VoyageSegmentService.ts` — orchestration layer used across pages and reports
+
+## Reference
+
+- [Directive 2003/87/EC (consolidated)](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02003L0087-20240101) — EU ETS directive
+- [Directive (EU) 2023/959](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L0959) — Amendment bringing maritime into ETS
+- [Regulation (EU) 2015/757 (consolidated)](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02015R0757-20240101) — MRV (data feed)
+- [DNV — EU ETS Maritime overview](https://www.dnv.com/maritime/insights/topics/eu-emissions-trading-system-ets/)
+- [CE Delft technical report](https://cedelft.eu/publications/eu-ets-and-fueleu-maritime/)

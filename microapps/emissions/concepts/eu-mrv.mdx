@@ -1,0 +1,67 @@
+---
+title: "EU MRV"
+description: "Monitoring, Reporting, and Verification — voyage-level CO₂ data for THETIS-MRV submission."
+---
+
+## What it is
+
+EU MRV (Monitoring, Reporting, Verification) is the EU's data-collection regime for maritime CO₂ — the prerequisite to EU ETS. Operators submit verified voyage-level emissions data through the EC's THETIS-MRV system every year.
+
+## Who it applies to
+
+Ships **5,000 GT and above** on voyages calling EU/EEA ports — Regulation (EU) 2015/757.
+
+## What gets reported
+
+For every voyage in the reporting year:
+
+- Departure and arrival ports (with UN/LOCODE)
+- Distance travelled
+- Time at sea, time at port
+- CO₂ emissions broken down by voyage segment
+- Fuel consumption by type (HFO, VLSFO, LFO, MDO, MGO, LNG, methanol, biofuel)
+- Cargo carried
+- Voyage classification (intra-EU, into-EU, out-of-EU, non-EU)
+
+Plus annual roll-ups: total CO₂, total distance, total fuel by type, and data-quality indicators (record count, completeness).
+
+## What the platform calculates
+
+The platform uses the same `VoyageSegmentService` that powers the EU ETS and vessel-detail pages. That means MRV report figures **match** what you see in the dashboard, voyage-by-voyage, with no separate "report-time" recalculation.
+
+For each voyage segment the report includes:
+
+- Segment ID (e.g. `99W-1`, `99W-2` for repeated voyage numbers)
+- Start/end timestamps
+- Departure and arrival ports + UN/LOCODE
+- Voyage type (INTRA_EU / INTO_EU / OUT_OF_EU / NON_EU)
+- Total CO₂ for the segment
+- Total distance for the segment
+- Fuel-mix breakdown for the segment
+- Record count (data-quality flag)
+
+## Output
+
+A **JSON-format EU MRV report** at `/api/reports/eu-mrv/[imo]?year=YYYY`, plus a downloadable PDF version from the [Reports hub](/product/reports-hub). The data structure is THETIS-MRV-compatible.
+
+<Frame caption="The EU MRV report card on the Reports hub. Vessel-level — pick a vessel first.">
+  <img src="/images/reports/eu-mrv-card.png" alt="EU MRV report card" />
+</Frame>
+
+## Deadline
+
+**31 March** of each year, for the previous calendar year, submitted via THETIS-MRV.
+
+## Reference
+
+### Primary regulation
+
+- [Regulation (EU) 2015/757 (consolidated)](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02015R0757-20240101) — Monitoring, Reporting, Verification of CO₂ from maritime transport
+
+### Submission
+
+- [EC THETIS-MRV portal](https://mrv.emsa.europa.eu/) — submission system run by EMSA
+
+### Industry guidance
+
+- [DNV — EU MRV](https://www.dnv.com/maritime/insights/topics/eu-mrv/)

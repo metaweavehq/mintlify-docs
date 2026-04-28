@@ -1,0 +1,75 @@
+---
+title: "Environment variables"
+description: "Every env var the app reads, what it does, and what it defaults to."
+---
+
+The app reads its config exclusively from environment variables. Set them in `.env.local` for local dev or in the Vercel project settings for deployment.
+
+## Required
+
+### Database
+
+| Var | Description |
+|---|---|
+| `POSTGRES_USER` | DB user |
+| `POSTGRES_PASSWORD` | DB password |
+| `POSTGRES_DB` | DB name |
+| `CLOUD_SQL_INSTANCE_CONNECTION_NAME` | GCP Cloud SQL instance ID — `<project>:<region>:<instance>` |
+| `GOOGLE_SERVICE_ACCOUNT_BASE64` | Service account JSON, base64-encoded |
+
+The platform expects to authenticate through the Cloud SQL Connector. Direct DB password connections are not supported.
+
+## Optional (with defaults)
+
+### Table names
+
+The platform supports running against differently-named tables — useful for multi-tenant or staging setups.
+
+| Var | Default | Description |
+|---|---|---|
+| `TABLE_VESSELS` | `common_vessel_details` | Vessel registry table |
+| `TABLE_CONSUMPTION` | `common_consumption_log` | Consumption logs table |
+| `TABLE_PARTICULARS` | `vessel_particulars_data` | Vessel particulars (DWT, GT, flag, etc.) |
+
+### Pricing
+
+| Var | Default | Description |
+|---|---|---|
+| `DEFAULT_EUA_PRICE` | `75` | EU Allowance price in EUR. Used in EU ETS cost projections across all pages and the EU ETS report. |
+
+## Example `.env.local`
+
+```bash
+# Database (Google Cloud SQL) — replace placeholders with your own values
+POSTGRES_USER=<your-db-user>
+POSTGRES_PASSWORD=<your-db-password>
+POSTGRES_DB=<your-db-name>
+CLOUD_SQL_INSTANCE_CONNECTION_NAME=<gcp-project>:<region>:<instance-name>
+GOOGLE_SERVICE_ACCOUNT_BASE64=<base64-encoded service account JSON>
+
+# Optional overrides
+DEFAULT_EUA_PRICE=85
+```
+
+<Warning>
+  Never commit real values for these variables. Use `.env.local` (git-ignored) for local development and your hosting provider's secret manager for production. Rotate the service account JSON if it is ever exposed.
+</Warning>
+
+## Generating the service account base64
+
+```bash
+base64 -i path/to/service-account.json | tr -d '\n' | pbcopy
+```
+
+Paste the result into `.env.local`. The platform decodes it at startup and uses it to authenticate with Cloud SQL.
+
+## How vars are loaded
+
+- **Local**: Next.js auto-loads `.env`, `.env.local`, `.env.development.local` from the repo root
+- **Vercel**: Set them in Project → Settings → Environment Variables. Use the Vercel CLI's `vercel env pull` to mirror them locally.
+
+## Security notes
+
+- The service account JSON is decoded into `/tmp` at startup, then deleted after the connector reads it. The file mode is `0o600`.
+- No env var is exposed to the client — every secret-bearing read happens server-side.
+- CSP headers in `next.config.ts` further restrict where the app can be framed from.

@@ -1,0 +1,48 @@
+---
+title: "Reefer correction"
+description: "How reefer-container CO₂ is stripped from CII per IMO MEPC.355(78)."
+---
+
+Container ships and reefer vessels carrying refrigerated containers consume extra fuel to keep cargo cold. IMO MEPC.355(78) recognises this is **cargo-related** rather than propulsion-related, and lets operators strip those emissions from the Attained CII calculation.
+
+## Formula
+
+```
+Reefer fuel (tonnes) = Cx × SFOC × Reefer-Hours / 1,000,000
+Reefer CO₂ (tonnes)  = Reefer fuel × CF
+Corrected Attained CII = (Total CO₂ − Reefer CO₂) × 10⁶ / (Capacity × Distance NM)
+```
+
+## IMO default constants
+
+The platform uses the MEPC.355(78) defaults:
+
+| Constant | Value | Notes |
+|---|---|---|
+| Cx (default reefer power) | 2.75 kW | Per active reefer |
+| SFOC (2-stroke engines) | 175 g/kWh | Default for container ships |
+| SFOC (4-stroke engines) | 200 g/kWh | Alternate, configurable |
+| CF (HFO) | 3.114 t CO₂ / t fuel | Default |
+| CF (MGO/MDO) | 3.206 t CO₂ / t fuel | Alternative |
+
+## Inputs from the consumption log
+
+The platform sums `activeReefers × period` across every report in the year to compute total **reefer-hours**. From there, fuel and CO₂ follow directly.
+
+## What you see
+
+On the vessel detail page, two CII numbers are shown side by side:
+
+- **Database CII** — what's reported in the consumption logs (operator-supplied, may or may not include reefer correction depending on source)
+- **Corrected CII** — the reefer-corrected figure computed by the platform
+
+A link opens the full MEPC.355(78) PDF in an in-app slide-out for reference.
+
+## Implementation
+
+`src/lib/utils/ciiCalculator.ts` — exports `calculateReeferCorrection` and `calculateCIIWithReeferCorrection`.
+
+## Reference
+
+- [IMO MEPC.355(78)](https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/MEPCDocuments/MEPC.355(78).pdf) — 2022 Interim Guidelines on correction factors and voyage adjustments for CII calculations
+- [IMO MEPC.364(79)](https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/MEPCDocuments/MEPC.364(79).pdf) — CO₂ emission factors (Cf) for HFO and MGO
