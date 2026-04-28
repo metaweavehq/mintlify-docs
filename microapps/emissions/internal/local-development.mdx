@@ -1,0 +1,92 @@
+---
+title: "Local development"
+description: "Get the app running locally."
+---
+
+## Prerequisites
+
+- Node.js 20 or 22 (LTS)
+- Access to the Google Cloud SQL instance + a service account JSON
+- `npm` (the repo uses npm, not pnpm or yarn)
+
+## Setup
+
+```bash
+git clone <repo>
+cd <project-folder>
+npm install
+```
+
+## Configure
+
+Create `.env.local` at the repo root with the variables documented in [Environment variables](/internal/environment-variables). Minimum:
+
+```bash
+POSTGRES_USER=...
+POSTGRES_PASSWORD=...
+POSTGRES_DB=...
+CLOUD_SQL_INSTANCE_CONNECTION_NAME=...
+GOOGLE_SERVICE_ACCOUNT_BASE64=...
+```
+
+## Run
+
+```bash
+npm run dev          # Dev server on http://localhost:3000
+npm run build        # Production build (use to verify TypeScript)
+npm run lint         # ESLint (flat config)
+npm start            # Run the production build
+```
+
+The `dev` script is hardcoded to port 3000 (`next dev --port 3000`). To run on another port — e.g. for screenshot capture — bypass the npm script:
+
+```bash
+npx next dev --port 3001
+```
+
+## No tests
+
+There's no test framework configured. CI relies on `npm run build` and `npm run lint` to catch issues.
+
+## Project layout
+
+```
+src/
+├── app/                     # Next.js App Router routes
+│   ├── api/                 # API route handlers
+│   ├── (pages)/             # User-facing pages
+│   └── layout.tsx           # Root layout with FloatingNav
+├── components/
+│   ├── dashboard/           # Domain components
+│   └── ui/                  # Radix-based primitives
+├── hooks/
+│   └── useFleet.ts          # React Query hooks
+├── lib/
+│   ├── api.ts               # Typed fetch helpers
+│   ├── db/                  # Postgres connection + table names
+│   ├── models/              # TypeScript interfaces
+│   ├── services/            # Business logic (FleetService, etc.)
+│   └── utils/               # Calculators (CII, FuelEU, ports, Excel)
+└── contexts/                # YearContext, VesselContext
+```
+
+## Path alias
+
+`@/*` maps to `src/*`. Imports look like:
+
+```ts
+import { calculateCII } from '@/lib/utils/ciiCalculator'
+```
+
+Configured in `tsconfig.json` and `next.config.ts`.
+
+## Where to make changes
+
+| Change | File(s) |
+|---|---|
+| Adjust a CII rating boundary | `src/lib/utils/ciiCalculator.ts` |
+| Add a fuel type | `src/lib/utils/fuelEUCalculator.ts` |
+| Add an EU country | `src/lib/utils/portClassifier.ts` |
+| Update a regulation phase-in | Same files; usually one constant |
+| Add a new report | `src/lib/services/ReportExportService.ts` + `src/app/api/reports/...` |
+| Add a new dashboard view | `src/app/<route>/page.tsx` + `client.tsx` + new component in `src/components/dashboard/` |

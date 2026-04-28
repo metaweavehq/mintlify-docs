@@ -1,0 +1,60 @@
+---
+title: "EEOI"
+description: "Energy Efficiency Operational Indicator — by TEU and by weight, when to use which."
+---
+
+EEOI (Energy Efficiency Operational Indicator) measures CO₂ per **transport work** — i.e. per unit of cargo actually moved per nautical mile. Unlike CII, which uses a ship's design capacity in the denominator, EEOI uses what the ship is actually carrying.
+
+## Two flavours
+
+The vessel detail page shows EEOI in two units, depending on ship type:
+
+### EEOI by TEU (containers)
+
+```
+EEOI_TEU = Total CO₂ (g) / (TEU carried × Distance NM)
+```
+
+Reported in **gCO₂ / TEU-NM**. Used for container ships where cargo is volumetric.
+
+### EEOI by weight (bulk and general cargo)
+
+```
+EEOI_W = Total CO₂ (g) / (Cargo weight (t) × Distance NM)
+```
+
+Reported in **gCO₂ / tonne-NM**. Used for bulkers, tankers, and general cargo where cargo is mass-based.
+
+## Why both?
+
+Container vessels report cargo in TEU; bulkers in tonnes. A single weight-based EEOI doesn't make commercial sense for containers (a TEU of feathers and a TEU of bricks are very different). Showing both lets the dashboard work for any fleet mix.
+
+## Supporting figures
+
+Alongside the EEOI numbers, the vessel detail page shows:
+
+- **Transport work** — TEU-NM or T-NM
+- **Total CO₂** — tonnes
+- **Total distance** — NM
+- **Average cargo per voyage** — TEU or tonnes
+
+These let you sanity-check the input ratio.
+
+## Implementation
+
+EEOI is computed in the vessel detail client component using fields from the consumption log: `cargoWeightT`, `cargoTeu`, `distanceOverGroundNm`, `totalCo2T`. There's no separate calculator file — it's a straightforward division with type-aware unit choice.
+
+## Relationship to CII
+
+| | CII | EEOI |
+|---|---|---|
+| Denominator | Capacity (DWT/GT) — design | Cargo carried (TEU or t) — actual |
+| Used for | Compliance rating (A–E) | Operational efficiency tracking |
+| Regulator | IMO | Industry standard (not regulated) |
+| When more useful | Year-end compliance | Voyage-by-voyage efficiency |
+
+EEOI is **not** a regulatory metric — it's an operational benchmark that sits alongside CII. The platform shows both because they answer different questions.
+
+## Reference
+
+- [IMO MEPC.1/Circ.684](https://wwwcdn.imo.org/localresources/en/OurWork/Environment/Documents/Technical%20and%20Operational%20Measures/MEPC.1_Circ.684_Guidelines%20for%20Voluntary%20use%20of%20EEOI.pdf) — Guidelines for Voluntary Use of EEOI

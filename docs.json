@@ -65,9 +65,69 @@
         "tab": "Microapps",
         "groups": [
           {
-            "group": "Microapps",
+            "group": " ",
             "pages": [
-              "microapps/overview"
+              "microapps/overview",
+              {
+                "group": "Emissions Dashboard",
+                "pages": [
+                  "microapps/emissions/introduction",
+                  "microapps/emissions/quickstart",
+                  {
+                    "group": "Compliance Frameworks",
+                    "pages": [
+                      "microapps/emissions/concepts/compliance-overview",
+                      "microapps/emissions/concepts/cii",
+                      "microapps/emissions/concepts/eu-ets",
+                      "microapps/emissions/concepts/fuel-eu",
+                      "microapps/emissions/concepts/eu-mrv",
+                      "microapps/emissions/concepts/imo-dcs"
+                    ]
+                  },
+                  {
+                    "group": "Product Tour",
+                    "pages": [
+                      "microapps/emissions/product/fleet-overview",
+                      "microapps/emissions/product/vessel-detail",
+                      "microapps/emissions/product/eu-ets-dashboard",
+                      "microapps/emissions/product/fuel-eu-dashboard",
+                      "microapps/emissions/product/voyage-maps",
+                      "microapps/emissions/product/reports-hub",
+                      "microapps/emissions/product/data-upload",
+                      "microapps/emissions/product/methodology-explorer"
+                    ]
+                  },
+                  {
+                    "group": "Methodology",
+                    "pages": [
+                      "microapps/emissions/methodology/cii-formulas",
+                      "microapps/emissions/methodology/reefer-correction",
+                      "microapps/emissions/methodology/eu-ets-coverage",
+                      "microapps/emissions/methodology/fuel-eu-wtw",
+                      "microapps/emissions/methodology/eeoi"
+                    ]
+                  },
+                  {
+                    "group": "Data",
+                    "pages": [
+                      "microapps/emissions/data/excel-upload-format",
+                      "microapps/emissions/data/vessel-onboarding",
+                      "microapps/emissions/data/data-model"
+                    ]
+                  },
+                  {
+                    "group": "Internal",
+                    "pages": [
+                      "microapps/emissions/internal/architecture",
+                      "microapps/emissions/internal/tech-stack",
+                      "microapps/emissions/internal/database-postgres",
+                      "microapps/emissions/internal/services-layer",
+                      "microapps/emissions/internal/environment-variables",
+                      "microapps/emissions/internal/local-development"
+                    ]
+                  }
+                ]
+              }
             ]
           }
         ]
@@ -104,21 +164,7 @@
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "GitHub",
-          "href": "https://github.com/metaweavehq",
-          "icon": "github"
-        },
-        {
-          "anchor": "Contact",
-          "href": "mailto:hello@appliedaifoundation.org",
-          "icon": "envelope"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",

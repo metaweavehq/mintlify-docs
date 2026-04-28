@@ -1,0 +1,59 @@
+---
+title: "Data model"
+description: "What the platform stores — three tables, customer-relevant fields."
+---
+
+The platform persists everything in **PostgreSQL** (Google Cloud SQL). Three tables drive the whole experience:
+
+## 1. Vessels
+
+`common_vessel_details` (configurable via `TABLE_VESSELS`)
+
+One row per vessel:
+
+- `imo` — primary key
+- `vesselName`
+- `vesselType` — used for CII ship-type mapping (e.g. "Container", "Crude Oil Tanker")
+- Fleet, manager, operational status, classification society — soft metadata
+
+## 2. Consumption logs
+
+`common_consumption_log` (configurable via `TABLE_CONSUMPTION`)
+
+The heart of the system. One row per reporting period (typically 1 record per day per vessel). 40+ fields covering:
+
+- Identity: `imo`, `voyageName`
+- Time: `timestampUtc` (always UTC)
+- State: `event` (BOSP / EOSP / etc), `state` (In Port / At Sea)
+- Ports: `portOfOrigin` + `portOfOriginUnloc`, `portOfDestination` + `portOfDestinationUnloc`
+- Position: `lat`, `lng`
+- Distance: `distanceOverGroundNm`
+- Speed: `averageSpeedOverGroundCorrectedKn`
+- Emissions: `totalCo2T` plus breakdowns
+- Fuel: `totalFocT` plus by-type (HFO HS/LS, LFO, MDO, MGO, LNG, methanol, biofuel)
+- CII (if pre-computed by source): `ciiAttainedGTNmCo2`, `ciiRequired`, `ciiRating`
+- Cargo: `cargoWeightT`, `cargoTeu`
+- Reefer: `activeReefers`
+
+Indexed on `imo` and `timestampUtc` for the fleet-wide queries that drive the dashboard.
+
+## 3. Vessel particulars
+
+`vessel_particulars_data` (configurable via `TABLE_PARTICULARS`)
+
+Rich vessel-master data — DWT, GT, flag, engine type, build year, classification society, etc. Stored as a JSONB array of name/value pairs (`vesselParticulars` column). The platform extracts specific fields on demand using helpers like `getDWTFromParticulars()` and `getGrossTonnageFromParticulars()`.
+
+This is what feeds the **EU MRV report** vessel header and informs CII calculations when a precise DWT is needed.
+
+## What's deliberately not stored
+
+- **Pre-computed yearly summaries.** The platform computes everything on demand (with React Query caching) so a single source of truth exists. No risk of drift between reports and dashboards.
+- **User accounts.** No authentication layer is implemented in this build.
+- **Audit logs.** No history of changes is kept; data is treat-as-read after upload.
+
+## Source
+
+- Schema: there's no SQL DDL in the repo — tables are managed externally and connected via the configurable names above
+- Models: `src/lib/models/VesselParticulars.ts` (helpers for the JSONB particulars column)
+- Connection: `src/lib/db/postgres.ts`
+- Table names: `src/lib/db/tables.ts`

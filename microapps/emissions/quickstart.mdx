@@ -1,0 +1,77 @@
+---
+title: "5-minute tour"
+description: "Walk through the platform end to end — from fleet KPIs to a downloadable CII Statement."
+---
+
+This tour shows what an evaluator typically looks at first. It assumes you already have data loaded for at least one vessel and one year; if not, jump to [Excel upload format](/data/excel-upload-format) first.
+
+<Tip>
+  Want to follow along on the live app? [Open the demo dashboard](https://emissions-grrc--ildrgucx.apps.metaweave.in/?x-vercel-protection-bypass=ItrdifHwTIkDcePAkJxyr1fBRh2QZdlL&x-vercel-set-bypass-cookie=samesitenone) in a new tab — it has a demo fleet preloaded so every step below works out of the box.
+</Tip>
+
+<Steps>
+  <Step title="Pick a year">
+    The year selector in the header drives every page in the app. Choose any year that has data — or stay on the current year and toggle **YTD** for year-to-date.
+
+    <Frame caption="Year selector with YTD toggle for the current year.">
+      <img src="/images/fleet-overview/year-selector.png" alt="Year selector" />
+    </Frame>
+  </Step>
+
+  <Step title="Read the fleet at a glance">
+    The home page tells you four things instantly: how many vessels reported, total CO₂, EU ETS cost so far, and FuelEU compliance status — plus the A–E distribution across the fleet.
+
+    <Frame caption="Four summary cards plus the CII A–E distribution.">
+      <img src="/images/fleet-overview/summary-and-distribution.png" alt="Fleet KPIs and CII distribution" />
+    </Frame>
+  </Step>
+
+  <Step title="Drill into a vessel">
+    Click any row in the fleet table. The vessel page shows a CII gauge, EEOI by TEU and by weight, fuel breakdown, and a 12-month rolling chart with required CII step lines.
+
+    <Frame caption="Vessel detail — CII gauge, comparison box, and rolling chart.">
+      <img src="/images/vessel-detail/hero.png" alt="Vessel detail page" />
+    </Frame>
+  </Step>
+
+  <Step title="Expand a voyage">
+    The voyages table on the vessel page is expandable. Click a row to see the leg-by-leg breakdown with EU ETS coverage applied to each segment.
+
+    <Frame caption="Voyages expand into legs showing covered CO₂ per segment.">
+      <img src="/images/vessel-detail/voyages-expanded.png" alt="Expandable voyages with legs" />
+    </Frame>
+  </Step>
+
+  <Step title="Check EU ETS exposure">
+    The EU ETS dashboard shows the year's phase-in factor, voyage classification breakdown, and cost projection at the configured EUA price.
+
+    <Frame caption="EU ETS — phase-in banner, voyage types, and leg coverage.">
+      <img src="/images/eu-ets/hero.png" alt="EU ETS dashboard" />
+    </Frame>
+  </Step>
+
+  <Step title="Generate a report">
+    The Reports hub centralises all five regulatory outputs. Pick a vessel, pick a report, hit download.
+
+    <Frame caption="Reports hub — vessel-level and fleet-level reports in one place.">
+      <img src="/images/reports/hub.png" alt="Reports hub" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Compliance frameworks" icon="scale-balanced" href="/concepts/compliance-overview">
+    Read primers on each regulation the platform handles.
+  </Card>
+  <Card title="Product tour" icon="map" href="/product/fleet-overview">
+    A page-by-page walkthrough with every screen and feature.
+  </Card>
+  <Card title="Methodology" icon="flask" href="/methodology/cii-formulas">
+    Formulas, constants, and references behind every calculation.
+  </Card>
+  <Card title="Upload your data" icon="upload" href="/product/data-upload">
+    Excel format, validation, and onboarding new vessels.
+  </Card>
+</CardGroup>

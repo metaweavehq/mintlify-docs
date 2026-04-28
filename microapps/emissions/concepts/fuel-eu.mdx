@@ -1,0 +1,119 @@
+---
+title: "FuelEU Maritime"
+description: "Well-to-Wake GHG intensity targets, supported fuels, and how compliance is calculated."
+---
+
+## What it is
+
+FuelEU Maritime caps the **GHG intensity** (greenhouse-gas emissions per megajoule of energy used) of fuels burned on voyages touching EU/EEA ports. The target tightens every five years, pushing the fleet toward low- and zero-carbon fuels.
+
+The metric is **Well-to-Wake (WtW)**: it counts emissions from extracting and producing the fuel (Well-to-Tank) plus emissions from burning it on board (Tank-to-Wake), expressed in gCO₂eq per MJ.
+
+## Who it applies to
+
+Ships **5,000 GT and above** on voyages calling EU/EEA ports — Regulation (EU) 2023/1805. In force from 1 January 2025.
+
+## The reduction trajectory
+
+Baseline: **91.16 gCO₂eq/MJ** (2020 fleet average).
+
+| Year | Target intensity (gCO₂eq/MJ) | Reduction vs. baseline |
+|---|---|---|
+| 2025 | 89.34 | −2% |
+| 2030 | 85.69 | −6% |
+| 2035 | 77.94 | −14.5% |
+| 2040 | 62.90 | −31% |
+| 2045 | 34.64 | −62% |
+| 2050 | 18.23 | −80% |
+
+Targets are step-wise — the 2025 figure applies through 2029, then drops at 2030, and so on.
+
+## Supported fuels
+
+The platform handles **19 fuel types** with EU Annex II default emission factors built in:
+
+<CardGroup cols={2}>
+  <Card title="Conventional">
+    HFO, LFO, MDO, MGO
+  </Card>
+  <Card title="Alternative fossil">
+    LNG, fossil Methanol, LPG (Propane / Butane), Ammonia (Grey), Hydrogen (Grey)
+  </Card>
+  <Card title="Biofuels">
+    FAME, HVO, Bio-Methanol, Bio-LNG, Bio-Blend (with bunker-cert dating)
+  </Card>
+  <Card title="E-fuels & green">
+    E-Methanol, E-LNG, Ammonia (Green), Hydrogen (Green)
+  </Card>
+</CardGroup>
+
+For LNG, the platform applies **methane slip** based on engine type:
+
+- Otto medium-speed: 3.1% (default)
+- Otto slow-speed: 1.7%
+- Diesel: 0.2%
+- LBSI (lean-burn spark-ignition): 2.6%
+
+Biofuel blends are **dated** — pre-8-Aug-2025 bunkers use a certified WtW of 9.2 gCO₂eq/MJ; post-cutoff bunkers use 10.8 gCO₂eq/MJ. The platform tracks consumption date so the right factor is applied.
+
+## Compliance and penalties
+
+Compliance is computed at the fleet level (per operator):
+
+```
+Fleet GHG Intensity = Σ (Energy × WtW) / Σ Energy
+Compliance Balance  = (Target − Actual) × Total Energy
+```
+
+A **negative balance** means a deficit. The penalty is:
+
+```
+Penalty (€) = |Balance| / Actual Intensity × (€2,400 / 41,000 MJ)
+```
+
+That formula expresses the penalty as the EUR cost of the energy gap valued at VLSFO equivalent — €2,400 per tonne of VLSFO (≈ 41,000 MJ).
+
+You can also avoid penalty through:
+
+- **Banking** surplus from a year of over-compliance (up to 2 years forward)
+- **Borrowing** up to 2% from next year's target
+- **Pooling** compliance with other ships under the same operator
+
+## What you see in the product
+
+<Frame caption="FuelEU dashboard — compliance status, daily intensity vs. target, and fuel mix.">
+  <img src="/images/fuel-eu/hero.png" alt="FuelEU dashboard" />
+</Frame>
+
+- **Compliance banner** — green or red, with the gap quantified in tonnes CO₂eq
+- **Daily intensity chart** — fleet GHG intensity over the year against the target line
+- **Fuel breakdown table** — consumption, energy (MJ), WtT, TtW, WtW, share %
+- **Per-vessel ranking** — which vessels are pulling the fleet above target
+- **Reduction pathway** — built-in reference table for 2025–2050
+
+## Output
+
+A **FuelEU Maritime Report** with fleet GHG intensity, fuel mix, compliance balance, and penalty projection — formatted for verifier submission. See [Reports hub](/product/reports-hub).
+
+## Reference
+
+### Primary regulations
+
+- [Regulation (EU) 2023/1805](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32023R1805) — FuelEU Maritime
+- [Annex II default emission factors](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32023R1805#d1e32-94-1) — WtT, TtW, LCV for every supported fuel
+
+### Industry guides
+
+- [DNV — FuelEU Maritime](https://www.dnv.com/maritime/insights/topics/fueleu-maritime/)
+- [CE Delft — FuelEU Maritime and EU ETS Report](https://cedelft.eu/publications/eu-ets-and-fueleu-maritime/)
+- [BetterSea — FuelEU Maritime Calculation Guide](https://bettersea.com/fueleu-maritime/)
+- [European Sustainable Shipping Forum (ESSF)](https://transport.ec.europa.eu/transport-themes/sustainable-transport/european-sustainable-shipping-forum_en)
+- [Sustainable Ships — FuelEU Penalty Calculator](https://www.sustainableships.org/fueleu-maritime/)
+
+### GHG / GWP
+
+- [IPCC AR5 GWP Values](https://www.ipcc.ch/assessment-report/ar5/) — source of CH₄ = 28, N₂O = 265
+
+### In this documentation
+
+- [Methodology: FuelEU WtW](/methodology/fuel-eu-wtw)

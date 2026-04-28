@@ -1,0 +1,53 @@
+---
+title: "Compliance frameworks at a glance"
+description: "Side-by-side comparison of the five maritime regulations supported by the platform."
+---
+
+The shipping industry now has five overlapping reporting regimes. Each measures something slightly different, has a different deadline, and goes to a different authority. The platform handles all five from the same dataset.
+
+## Comparison
+
+| Framework | Authority | Scope | What we calculate | What we generate | Deadline |
+|---|---|---|---|---|---|
+| **IMO CII** | Flag State / IMO | Ships ≥ 5,000 GT | Attained CII, Required CII, A–E rating, reefer-corrected CII | CII Statement of Compliance | 31 March |
+| **EU ETS** | EU Verifier | Voyages calling EU/EEA ports | Voyage classification, covered CO₂, phase-in factor, EUA cost | EU ETS Report | 30 September |
+| **FuelEU Maritime** | EU Verifier | Energy used in EU/EEA waters | WtW GHG intensity, compliance balance, penalty | FuelEU Report | 31 January |
+| **EU MRV** | EC THETIS-MRV | Voyages calling EU/EEA ports | Voyage-level CO₂, distance, fuel mix | EU MRV Report | 31 March |
+| **IMO DCS** | Flag State / IMO GISIS | Ships ≥ 5,000 GT | Annual fuel consumption, distance, hours underway | IMO DCS Report | 31 March |
+
+## How they interlock
+
+<CardGroup cols={2}>
+  <Card title="One dataset, five outputs" icon="layer-group">
+    All five reports are computed from the same consumption logs you upload. Upload once; generate everything.
+  </Card>
+  <Card title="Year-aware throughout" icon="calendar">
+    CII reduction factors, ETS phase-in, FuelEU targets — all change by year. Pick the year and every number updates.
+  </Card>
+  <Card title="Voyage-leg precision" icon="route">
+    EU ETS coverage is applied per-leg using BOSP-based segmentation, not whole voyages. The EU MRV report follows the same model.
+  </Card>
+  <Card title="Audit-ready trace" icon="file-shield">
+    Every figure is back-traceable to the consumption log row that produced it.
+  </Card>
+</CardGroup>
+
+## Read the primers
+
+<CardGroup cols={2}>
+  <Card title="IMO CII" icon="leaf" href="/concepts/cii">
+    Carbon Intensity Indicator, A–E ratings, reduction trajectory through 2030.
+  </Card>
+  <Card title="EU ETS" icon="building-columns" href="/concepts/eu-ets">
+    Voyage classification, coverage factors, phase-in 2024–2026.
+  </Card>
+  <Card title="FuelEU Maritime" icon="droplet" href="/concepts/fuel-eu">
+    WtW GHG intensity, 19 fuel types, banking & pooling, €2,400/t penalty.
+  </Card>
+  <Card title="EU MRV" icon="file-lines" href="/concepts/eu-mrv">
+    Voyage-level CO₂ reporting under Regulation (EU) 2015/757.
+  </Card>
+  <Card title="IMO DCS" icon="ship" href="/concepts/imo-dcs">
+    Annual fuel data submission via flag state to IMO GISIS.
+  </Card>
+</CardGroup>

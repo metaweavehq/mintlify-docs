@@ -1,0 +1,56 @@
+---
+title: "Vessel onboarding"
+description: "Two paths — pick from the existing fleet, or register a new vessel before uploading data."
+---
+
+There are two ways to attach consumption data to a vessel:
+
+## Path 1: Existing vessel
+
+Used when the vessel is already registered in the system.
+
+<Steps>
+  <Step title="Pick the vessel from the dropdown">
+    The Upload page dropdown lists all vessels in the fleet. Select one. The form shows the vessel's type and DWT for confirmation.
+  </Step>
+  <Step title="Drop in the Excel file">
+    Drag-drop or click to select. See [Excel upload format](/data/excel-upload-format) for the expected schema.
+  </Step>
+  <Step title="Preview, then upload">
+    Standard preview-then-confirm flow. New rows are inserted; duplicates skipped.
+  </Step>
+</Steps>
+
+## Path 2: New vessel
+
+Used the very first time data is uploaded for a vessel.
+
+<Steps>
+  <Step title="Switch the toggle to 'Add new vessel'">
+    The form expands with three required fields.
+  </Step>
+  <Step title="Enter vessel details">
+    | Field | Format | Notes |
+    |---|---|---|
+    | IMO | 7 digits | Numeric only |
+    | Vessel name | Free text | Match the vessel's official name |
+    | DWT | Numeric | Deadweight in tonnes |
+  </Step>
+  <Step title="Upload the file">
+    The vessel is registered first (creates a row in `common_vessel_details`), then the consumption file is parsed and inserted.
+  </Step>
+</Steps>
+
+## Vessel particulars
+
+Beyond the basic registration above, deeper particulars (engine type, flag state, gross tonnage, classification society, etc.) live in a separate table (`vessel_particulars_data`). These are typically loaded out-of-band — they support EU MRV reporting and help disambiguate ship-type classification.
+
+## Editing vessel details
+
+There's no in-app edit screen for vessel details. To change a vessel's name, type, or DWT after onboarding, update the database directly. (A future release may add an admin UI.)
+
+## Source
+
+- API route: `POST /api/vessels` for vessel creation
+- Upload service: `src/lib/services/UploadService.ts`
+- Vessel model: stored as a row in the `common_vessel_details` table

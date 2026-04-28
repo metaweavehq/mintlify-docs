@@ -1,0 +1,121 @@
+---
+title: "Excel upload format"
+description: "What columns the platform expects, how headers are normalised, and how validation works."
+---
+
+The platform accepts Excel consumption logs in `.xlsx` and `.xls`. Files up to **50 MB** are supported. There's no rigid schema — column headers are normalised on the fly to camelCase database fields, and only a handful of fields are strictly required.
+
+## Header normalisation
+
+Excel headers are converted to camelCase using these rules (`src/lib/utils/excelParser.ts`):
+
+- Split on whitespace, parentheses, `/`, `-`, `%`
+- Strip degree symbols (`°`)
+- Convert `³` → `3`, `²` → `2`
+- First token lowercased, subsequent tokens TitleCased
+- Result: a PostgreSQL column name
+
+Examples:
+
+| Excel header | Database field |
+|---|---|
+| `Timestamp (UTC)` | `timestampUtc` |
+| `Cargo Weight (t)` | `cargoWeightT` |
+| `Active Reefers` | `activeReefers` |
+| `Distance Over Ground (nm)` | `distanceOverGroundNm` |
+| `Average Speed Over Ground (corrected) (kn)` | `averageSpeedOverGroundCorrectedKn` |
+| `CII Attained (g/t-nm CO2)` | `ciiAttainedGTNmCo2` |
+| `Heading (°)` | `heading` |
+| `Total Waste Disposal (m³)` | `totalWasteDisposalM3` |
+
+This means you don't need to rename your existing vendor exports — drop them in and the platform figures it out.
+
+## Required column
+
+Exactly one column is strictly required:
+
+- `timestampUtc` (any header that normalises to this — typically `Timestamp (UTC)`)
+
+Rows without a valid `timestampUtc` are flagged in the preview and **not inserted**.
+
+## Recommended columns
+
+The richer your data, the more the platform can do. The following fields drive specific calculations:
+
+### Identity
+
+- `imo` — vessel IMO (also supplied via the upload form)
+- `voyageName` — voyage number (e.g. `99W`, `102E`)
+- `event` — `BOSP` (Beginning of Sea Passage), `EOSP`, etc. **Required for accurate EU ETS leg detection.**
+- `state` — `In Port` / `At Sea` (drives port-vs-sea CO₂ split)
+
+### Position & route
+
+- `portOfOrigin` / `portOfOriginUnloc` — departure port + UN/LOCODE
+- `portOfDestination` / `portOfDestinationUnloc` — arrival port + UN/LOCODE
+- `lat` / `lng` — geographic position (powers the [Maps page](/product/voyage-maps))
+
+### Distance & speed
+
+- `distanceOverGroundNm`
+- `averageSpeedOverGroundCorrectedKn`
+
+### Emissions
+
+- `totalCo2T` — total CO₂ in tonnes for the period
+- Optional breakdowns: main engine, auxiliary, boiler
+
+### Fuel consumption (tonnes per period)
+
+- `totalFocT` — total fuel consumption
+- By type: `totalFocHfoHsT`, `totalFocHfoLsT`, `totalFocLfoT`, `totalFocMdoT`, `totalFocMgoT`, `totalFocLngT`, `totalFocMethanolT`, `totalFocBioFuelBlendT`
+
+### CII
+
+- `ciiAttainedGTNmCo2`
+- `ciiRequired`
+- `ciiRating`
+
+If supplied, the platform uses these directly for vessel-level CII display. The methodology engine still computes Required and Attained CII from raw inputs for cross-checking.
+
+### Cargo
+
+- `cargoWeightT` — for weight-based EEOI
+- `cargoTeu` — for TEU-based EEOI
+
+### Reefer correction
+
+- `activeReefers` — count of active reefer containers in this period
+
+Reefer-hours are accumulated as `Σ activeReefers × period`, which feeds [reefer correction](/methodology/reefer-correction).
+
+## Timestamp parsing
+
+`timestampUtc` accepts:
+
+- ISO 8601 strings (`2025-04-15T08:00:00Z`)
+- Excel date serial numbers (auto-detected, converted as UTC)
+- Short formats like `4/15/25 08:00`
+
+All timestamps are stored as **UTC**.
+
+## Duplicate detection
+
+A row is considered a duplicate if a record already exists for the same `imo` + `timestampUtc`. Duplicates are **skipped** (not overwritten) — the upload preview tells you exactly how many will be skipped before you commit.
+
+## Preview behaviour
+
+The preview endpoint (`POST /api/upload/consumption?action=preview`):
+
+- Returns column count, total rows, date range, valid rows
+- Returns the first 10 rows of normalised data so you can verify column mapping
+- Reports any duplicate count
+- Returns explicit row-level errors for invalid timestamps or missing required fields
+
+Once preview looks right, the same endpoint without `?action=preview` performs the insert.
+
+## Reference
+
+- Parser: `src/lib/utils/excelParser.ts`
+- Upload route: `src/app/api/upload/consumption/route.ts`
+- Service layer: `src/lib/services/UploadService.ts`

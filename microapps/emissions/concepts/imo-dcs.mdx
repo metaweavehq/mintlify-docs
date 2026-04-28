@@ -1,0 +1,64 @@
+---
+title: "IMO DCS"
+description: "Annual Data Collection System submission for fuel oil consumption."
+---
+
+## What it is
+
+IMO DCS (Data Collection System) is the global counterpart to EU MRV. Operators submit **annual** fuel-consumption data through the flag state to IMO GISIS. That data feeds the CII rating system.
+
+## Who it applies to
+
+Cargo, RoPax, and cruise ships **5,000 GT and above** trading internationally — under MARPOL Annex VI, Regulation 27.
+
+## What gets reported
+
+Annual roll-ups per ship:
+
+- Fuel consumption by type (in tonnes)
+- Distance travelled (NM)
+- Hours underway
+- Identification: IMO number, name, flag, type, capacity (DWT or GT)
+
+Note that DCS is **annual aggregate**, unlike EU MRV which is voyage-level.
+
+## What the platform generates
+
+A **IMO DCS Report** containing:
+
+- Vessel identification and particulars (name, IMO, flag, type, DWT, GT)
+- Annual fuel consumption by type (HFO, VLSFO, LFO, MDO, MGO, LNG, methanol, biofuel)
+- Total fuel consumption
+- Total distance over ground
+- Sea days and port days
+- Data-quality flag (record count, completeness)
+
+The report is generated for any vessel-year combination from the same database that powers the rest of the dashboard — no separate ingestion step.
+
+## Output
+
+Downloadable PDF from the [Reports hub](/product/reports-hub). Pick a vessel and a year, click the IMO DCS card.
+
+<Frame caption="IMO DCS report card on the Reports hub.">
+  <img src="/images/reports/imo-dcs-card.png" alt="IMO DCS report card" />
+</Frame>
+
+## Deadline
+
+**31 March** of each year, for the previous calendar year. Submitted by the flag administration to IMO GISIS.
+
+## Reference
+
+### Primary regulation
+
+- MARPOL Annex VI, Regulation 27 — Mandatory annual fuel oil consumption reporting
+- [IMO MEPC.292(71)](https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/MEPCDocuments/MEPC.292(71).pdf) — Data Collection System Guidelines
+- [IMO MEPC.364(79)](https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/MEPCDocuments/MEPC.364(79).pdf) — 2023 Guidelines on CO₂ emission factors used for DCS
+
+### Submission
+
+- [IMO GISIS](https://gisis.imo.org/) — Global Integrated Shipping Information System (flag state submission)
+
+### Industry guidance
+
+- [DNV — IMO DCS](https://www.dnv.com/maritime/insights/topics/imo-dcs/)

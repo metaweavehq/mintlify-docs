@@ -1,0 +1,68 @@
+---
+title: "Architecture"
+description: "How data flows from Postgres to the user's screen, and the key design decisions along the way."
+---
+
+The platform is a single Next.js 16 app deployed to Vercel. There are no microservices, no separate API server, and no client-side state store beyond React Query.
+
+## Data flow
+
+```
+PostgreSQL (Google Cloud SQL)
+       │
+       ▼
+src/lib/db/postgres.ts        ← Cloud SQL Connector + pg pool
+       │
+       ▼
+src/lib/services/             ← business logic (FleetService, VoyageSegmentService, etc.)
+       │
+       ▼
+src/app/api/**/route.ts       ← Next.js API routes (thin wrappers around services)
+       │
+       ▼
+src/lib/api.ts                ← typed fetch helpers
+       │
+       ▼
+src/hooks/useFleet.ts         ← React Query hooks (5-min stale time)
+       │
+       ▼
+React components              ← src/components/dashboard/, page client.tsx files
+```
+
+Every page in the App Router is a **server component** by default, paired with a `client.tsx` that handles interaction (year selectors, filters, expandable rows). Server components do the initial data fetch via the service layer; client components hydrate via React Query.
+
+## Key design decisions
+
+### 1. One source of truth for voyage segmentation
+
+`VoyageSegmentService` is used by **every** page that touches voyage-level data — fleet ETS dashboard, vessel detail, EU MRV report, EU ETS report. There's no separate "report-time" recalculation. The numbers you see in the dashboard are the numbers in the report.
+
+### 2. Calculations are pure utilities
+
+`ciiCalculator.ts`, `fuelEUCalculator.ts`, and `portClassifier.ts` are pure TypeScript modules with no I/O. They're called from services, from API routes, and from the methodology page's interactive calculators — same code path everywhere.
+
+### 3. No auth (yet)
+
+This build has no authentication layer. API routes are public — suitable for closed/internal deployments. Production-public deployment would require adding NextAuth or similar.
+
+### 4. Environment-driven table names
+
+`src/lib/db/tables.ts` reads table names from environment variables (`TABLE_VESSELS`, `TABLE_CONSUMPTION`, `TABLE_PARTICULARS`). Multiple deployments can share schema but use different table names — useful for multi-tenant or staging vs. production.
+
+### 5. React Query for client cache
+
+5-minute stale time for vessel/fleet data; 30-minute for the year list. Page navigation is instant after the first fetch.
+
+## Deployment
+
+- **Hosting**: Vercel
+- **Runtime**: Node.js (default Vercel function runtime)
+- **Database**: Google Cloud SQL (Postgres)
+- **Auth to DB**: Cloud SQL Connector via service account (no password leak risk)
+
+## See also
+
+- [Tech stack](/internal/tech-stack)
+- [Database](/internal/database-postgres)
+- [Services layer](/internal/services-layer)
+- [Local development](/internal/local-development)

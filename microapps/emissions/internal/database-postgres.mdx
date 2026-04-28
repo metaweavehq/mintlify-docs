@@ -1,0 +1,93 @@
+---
+title: "Database (PostgreSQL on Cloud SQL)"
+description: "Connection, pooling, retry logic, and table layout."
+---
+
+The platform talks to **Google Cloud SQL Postgres** via the Cloud SQL Connector. Connection setup lives in `src/lib/db/postgres.ts`.
+
+## Connection
+
+```ts
+import { Connector, IpAddressTypes } from '@google-cloud/cloud-sql-connector'
+import { Pool } from 'pg'
+```
+
+The Connector authenticates via a service account JSON, base64-encoded into the `GOOGLE_SERVICE_ACCOUNT_BASE64` env var. At startup:
+
+1. Decode the service account JSON
+2. Write it to a tmp file (mode `0o600`), point `GOOGLE_APPLICATION_CREDENTIALS` at it
+3. Create a `Connector` instance and request connection options for the configured Cloud SQL instance
+4. Delete the tmp file
+5. Open a `pg.Pool` with the connector's TCP options plus `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`
+
+## Pool configuration
+
+```ts
+new Pool({
+  ...clientOpts,
+  max: 5,
+  min: 1,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
+})
+```
+
+Plus a per-connection statement timeout:
+
+```ts
+pool.on('connect', (client) => {
+  client.query('SET statement_timeout = 30000').catch(() => {})
+})
+```
+
+So the worst a stuck query can do is hold a connection for 30 seconds, then it gets killed.
+
+## Retry logic
+
+`isTransientError()` matches:
+
+```
+ECONNRESET, ECONNREFUSED, ETIMEDOUT, EPIPE, EAI_AGAIN,
+CONNECTION_TERMINATED_UNEXPECTEDLY
+```
+
+Plus Postgres SQL state codes:
+
+```
+57P01 admin_shutdown
+57P02 crash_shutdown
+57P03 cannot_connect_now
+08006 connection_failure
+08001 sqlclient_unable_to_establish_sqlconnection
+08004 sqlserver_rejected_establishment_of_sqlconnection
+```
+
+A single automatic retry is performed when one of these is hit.
+
+## Type parsing
+
+NUMERIC/DECIMAL (Postgres OID 1700) is parsed as `float`; INT8/BIGINT (OID 20) is parsed as `int`. Default `pg` behaviour is to return them as strings, which would break arithmetic everywhere — overridden in `postgres.ts`.
+
+## Graceful shutdown
+
+`SIGTERM` and `SIGINT` handlers drain the pool and close the connector. Important on Vercel where deployments roll without warning.
+
+## Tables
+
+Three configurable table names (`src/lib/db/tables.ts`):
+
+```ts
+export const VESSELS_TABLE     = process.env.TABLE_VESSELS ?? 'common_vessel_details'
+export const CONSUMPTION_TABLE = process.env.TABLE_CONSUMPTION ?? 'common_consumption_log'
+export const PARTICULARS_TABLE = process.env.TABLE_PARTICULARS ?? 'vessel_particulars_data'
+```
+
+This lets multiple deployments share schema but point at different physical tables — useful for multi-tenant setups or staging vs. production.
+
+## Query helpers
+
+`postgres.ts` exports `query()` and `queryOne()` helpers used everywhere instead of acquiring a client manually. They handle the retry-on-transient logic and ensure clients are released back to the pool.
+
+## Schema management
+
+DDL is **not** in the repo. Tables are managed externally. The platform connects to whatever schema is provided.
