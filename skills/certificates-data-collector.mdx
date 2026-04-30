@@ -1,0 +1,52 @@
+---
+title: "Certificates Data Collector"
+description: "Junior agent skill that pulls the latest certificate inventory for a vessel and files it as evidence."
+---
+
+## What it does
+
+The **Certificates Data Collector** fetches the current state of every certificate on a vessel — type, issuing authority, issue and expiry dates, endorsements — and files it as a timestamped evidence record. It pairs with the [Certificates Analyzer](/skills/certificates-analyzer): the collector gathers, the analyzer interprets.
+
+The collector makes no judgements about compliance. It captures the snapshot exactly as the source system reports it.
+
+## When to use it
+
+- "Get cert data for POSUN"
+- "Cert check"
+- "Pull the latest certificates"
+- "Refresh certificate status"
+
+## What it captures
+
+For every certificate on the vessel:
+
+- Certificate type and category (statutory, class, flag, trade, crew)
+- Issuing authority and recognised organisation
+- Issue date, expiry date, endorsement dates
+- Validity status as reported by source
+- Survey or audit linkage where applicable
+
+Plus vessel-level totals (count by category, count expiring within key windows).
+
+## How it works
+
+1. Looks up the vessel by IMO.
+2. Pulls the latest certificate inventory from the configured source (ERP, class portal, or demo database).
+3. Writes a timestamped evidence record under the vessel's certificates case folder.
+4. Updates the case so any reviewing agent can see new evidence is available.
+
+If a vessel has no certificate data on record, the collector reports that explicitly rather than fabricating a portfolio.
+
+## What it produces
+
+- A structured certificate snapshot consumed by the analyzer
+- A plain-English summary that gives a human reader the headline numbers
+- Filing metadata recording when, from where, and which sequence number
+
+Every collection is a fresh, append-only record — re-running the collector never overwrites earlier snapshots.
+
+## Related skills
+
+- **certificates-analyzer** — senior skill that turns this snapshot into a compliance review
+- **class-society-data** — sister collector that pulls class survey data from class portals
+- **status-rollup** — fleet-wide compliance aggregation

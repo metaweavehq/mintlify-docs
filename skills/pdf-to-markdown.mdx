@@ -1,0 +1,57 @@
+---
+title: "PDF to Markdown"
+description: "Extracts PDFs to structured markdown using AI vision — preserves tables, diagrams, and layout, and builds search indexes."
+---
+
+## What it does
+
+The **PDF to Markdown** skill turns PDFs into searchable, structured markdown using AI vision. It preserves what other extractors lose: table structure, diagrams, form fields, document layout. Once converted, the markdown plus a generated keyword index makes the document instantly searchable across the document library.
+
+The skill processes pages in parallel for speed and embeds rendered page images in the markdown so any visual reference in the source remains visible in the converted output.
+
+## When to use it
+
+- "Make this searchable"
+- "Extract these PDFs"
+- "Index this folder"
+- "Convert PDF to markdown"
+- "Process these documents"
+
+## What it preserves
+
+- **Tables** — column structure and cell alignment, not flattened text
+- **Diagrams** — embedded as page images so engineers can still read them
+- **Forms** — field labels and values kept paired
+- **Layout** — heading hierarchy, lists, captions
+- **Page numbers** — every line traces back to its source page
+
+## How it works
+
+1. Renders each PDF page as an image.
+2. Calls a vision model with a layout-aware prompt to produce structured markdown for each page.
+3. Runs pages in parallel (configurable workers and rate limit) to keep wall-clock time low.
+4. Stitches per-page markdown into a single document with embedded page images.
+5. Builds a keyword index alongside the markdown for fast search later.
+
+## What it produces
+
+- One markdown file per PDF with embedded page images
+- A keyword index for the converted set (drives search-indexed-documents)
+- Metadata mapping markdown back to source PDF and page
+
+## Modes
+
+- **Single PDF** — convert one document
+- **Folder, recursive** — convert every PDF in a tree, building a unified index
+- **Index only** — rebuild the search index over an already-converted folder
+
+## Why vision-based
+
+Text-layer PDFs lose layout when extracted with traditional tools — and many maritime documents are scans with no text layer at all. Running vision over the rendered page captures structure regardless of how the PDF was produced.
+
+## Related skills
+
+- **pdf-vision-extractor** — diagram and table extraction from individual pages
+- **search-indexed-documents** — search across every converted document
+- **download-flag-circulars** — sister skill that downloads circulars this skill then converts
+- **download-makers-circulars** — same, for manufacturer circulars

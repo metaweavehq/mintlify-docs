@@ -1,0 +1,57 @@
+---
+title: "Makers Circulars Sync"
+description: "Downloads and syncs equipment manufacturer service letters (MAN B&W, Framo, Yanmar, etc.) into the local document library."
+---
+
+## What it does
+
+The **Makers Circulars Sync** skill keeps the document library current with service circulars and bulletins from marine equipment manufacturers. It checks each manufacturer's published index, identifies new bulletins, downloads them, and registers them so they become searchable.
+
+Each manufacturer has a dedicated scraper. New manufacturers can be added without config changes — they're auto-discovered.
+
+## Supported manufacturers
+
+The current set includes MAN B&amp;W, Framo, and Yanmar, with more added as scrapers are written. The status output always shows the live list.
+
+## When to use it
+
+- "Sync circulars"
+- "Download service letters"
+- "Update makers circulars"
+- "Sync MAN B&amp;W"
+- "Check for new Framo bulletins"
+
+## How it works
+
+### 1. Status check
+
+A status table shows, per manufacturer, how many circulars are on the website, how many are downloaded locally, how many are indexed for search, and how many are new since the last sync.
+
+### 2. Differential download
+
+The sync compares the website list against the local registry and downloads only the missing items.
+
+### 3. Registry update
+
+Each new circular is registered with its number, title, manufacturer, issue date, and source URL.
+
+### 4. Email notification
+
+When new circulars are downloaded, an email goes out with the PDFs attached so engineers see them without needing to log into the document library.
+
+## What it produces
+
+- Newly downloaded circular PDFs in the document library
+- Registry entries linking each PDF to its metadata
+- A status table showing per-manufacturer sync state
+- Email summary when new circulars arrive
+
+## Why it's split per manufacturer
+
+Manufacturer portals vary widely — some require auth, some publish RSS, some change format silently. Splitting per manufacturer keeps each site's quirks isolated.
+
+## Related skills
+
+- **download-flag-circulars** — sister skill for flag-state circulars
+- **search-indexed-documents** — search across every downloaded circular
+- **pdf-to-markdown** — converts downloaded PDFs to searchable markdown

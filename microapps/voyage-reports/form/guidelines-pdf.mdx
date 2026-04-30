@@ -1,0 +1,152 @@
+---
+title: "Guidelines documents"
+description: "What's in each of the seven guideline documents bundled with the form, and which one to read for which question."
+---
+
+The Metaweave form ships with seven guideline documents in `guidelines/metaweave/`. They exist in both Markdown and PDF form — the Markdown is editable, the PDF is what's circulated to the fleet.
+
+The guidelines describe the actual fields, sections, events, and validation rules of the Metaweave forms in plain language. **Audience: Vessel Masters and officers filling forms; Shore staff reviewing submissions and training crew.**
+
+## The seven documents
+
+Click any card to open the PDF in a new tab.
+
+<CardGroup cols={2}>
+  <Card title="01 — Forms Guidelines" icon="book" href="/pdfs/01-Metaweave-Forms-Guidelines.pdf">
+    Main field-by-field walkthrough of Noon, Arrival, Departure. Submission workflow, in-port bunker rules, FAQs.
+  </Card>
+  <Card title="02 — Event Scenarios" icon="diagram-project" href="/pdfs/02-Metaweave-Event-Scenarios.pdf">
+    11 diagrams for sequencing events in common operational scenarios.
+  </Card>
+  <Card title="03 — Cargo Discharge & Heating" icon="temperature-high" href="/pdfs/03-Cargo-Discharge-and-Heating.pdf">
+    CII-allowance bunker reporting for tankers — Framo, Marflex, steam-turbine.
+  </Card>
+  <Card title="04 — STS / Ice / Emergency" icon="triangle-exclamation" href="/pdfs/04-STS-Ice-Emergency.pdf">
+    Reporting Ship-to-Ship operations, ice navigation, refuge port calls, SAR/piracy periods.
+  </Card>
+  <Card title="05 — New Reports" icon="file-circle-plus" href="/pdfs/05-New-Reports.pdf">
+    Metaweave-only reports — Statement of Facts, Port Performance Survey, Delay, Month-End Bunker.
+  </Card>
+  <Card title="06 — Bunker Report" icon="oil-can" href="/pdfs/06-Bunker-Report.pdf">
+    Bunker Report walkthrough — voyage timestamps, BDN table, Bio Fuel & Blend dialogs.
+  </Card>
+  <Card title="07 — Settings & History" icon="gear" href="/pdfs/07-Settings-and-History.pdf">
+    Settings panel, Export Configured HTML, linking history.json, daily archive flow, History Viewer.
+  </Card>
+</CardGroup>
+
+## 01 — Forms Guidelines
+
+The main reference document. Read this end-to-end before filling your first report.
+
+**Covers:**
+
+- **Introduction** — what Metaweave is, the report types, the steps to start
+- **Submission workflow** — copy from preview → paste into Outlook plain-text → standardised subject → send
+- **Noon Report** — every section, every field: Vessel, Voyage, Distance & Vessel, Weather, Events, Bunker ROB, Technical Parameters, Scrubber, FOWE, Slops & Fresh Water, Master's name
+- **Arrival Report** — differences from Noon
+- **Departure Report** — differences from Noon, plus Berthing Details
+- **In-port bunker rules** — when to add a bunker event vs. a separate Bunker Report
+- **FAQs** — common questions
+
+When to read it: **always**. It's the primary crew-facing manual.
+
+## 02 — Event Scenarios
+
+The Events block is the trickiest part of the form. Different operational scenarios need specific event sequences for the analytics to compute correctly.
+
+**Covers 11 scenarios with diagrams:**
+
+- Routine port call (loading/discharging)
+- Anchorage waiting → berth
+- Bunker operations (alongside vs. anchored)
+- STS operations (lightering)
+- Canal transits (Suez, Panama, Bosphorus, Sound)
+- Drifting / awaiting orders
+- Engine breakdown / repair
+- Drydock arrival/departure
+- Bad weather avoidance
+- Refuge port emergencies
+- Multiple cargo operations at one port
+
+Each scenario shows: the event sequence, what to flag at noon, when to send Arrival vs. Departure, and which event types to use vs. avoid.
+
+When to read it: when you're about to do anything other than a routine port call, or when you're not sure which event type to pick.
+
+## 03 — Cargo Discharge & Heating
+
+CII (Carbon Intensity Indicator) gives tankers an allowance for fuel burned during cargo discharge and cargo heating. To claim the allowance, that fuel has to be **booked correctly** in the events block.
+
+**Covers:**
+
+- Three discharge systems: Framo (hydraulic pumps), Marflex (electric pumps), steam turbine pumps
+- Cargo heating with auxiliary boiler vs. cargo heating with main engine waste heat
+- Which event type to use for each system
+- Worked examples per system
+
+When to read it: if your vessel discharges crude/products and you want CII credit for the discharge consumption.
+
+## 04 — STS / Ice / Emergency
+
+Three special operating modes that need extra reporting fidelity.
+
+**Covers:**
+
+- **STS operations** — flagging on Noon vs. dedicated event, mother-ship vs. daughter-ship reporting
+- **Ice navigation** — `Within Ice Edge` flag, ice-class-specific rules
+- **Refuge Port** — calling a port due to emergency (mechanical, medical, weather)
+- **SAR / Piracy** — search-and-rescue or piracy avoidance periods
+
+Each section explains: which flag(s) to set, which event type(s) to use, what to add to remarks, what the shore team is looking for.
+
+## 05 — New Reports
+
+Documents the supplementary reports that complement the daily reporting cycle:
+
+- **Statement of Facts (SOF)** — port-by-port activity log + cargo details
+- **Port Performance Survey** — feedback on port efficiency (separate from SOF)
+- **Delay Report** — captures off-hire periods: when it started, when it ended, reason, claimable hours
+- **Month-End Bunker Data** — bunker ROB reconciliation on the last day of each calendar month
+
+Each report has its own field walkthrough.
+
+## 06 — Bunker Report
+
+The Bunker Report has the most complex data structure of all the reports because of the BDN (Bunker Delivery Note) table and the biofuel/blend nested data.
+
+**Covers:**
+
+- When to file a Bunker Report (every lift, including supplementary lifts)
+- Voyage timestamps — barge alongside, hose connected, commenced, completed, hose disconnected, barge cast off
+- The BDN table — one row per fuel grade lifted with supplier, BDN number, quantity, density, sulphur, viscosity, LCV
+- The Bio Fuel dialog — feedstock, ISCC certificate, GHG intensity, sustainability tag (per feedstock)
+- The Blend Component dialog — per-component fossil fuel makeup of a blended product
+- Worked examples for: pure VLSFO lift, bio-VLSFO blend, mixed grade lift, LNG lift
+
+## 07 — Settings & History
+
+The operational guide for the office (one-time per vessel) and for the vessel (one-time per computer + every Submit).
+
+**Covers:**
+
+- **Part 1 — Shore (one-time per vessel):** Configure Settings → vessel identifiers + validation limits → Save & Apply → Export Configured HTML → email to vessel
+- **Part 2 — Vessel (one-time per computer):** Open form → Settings → Link history.json → grant Allow → status reads "Linked"
+- **Part 3 — Vessel (every Submit):** What happens automatically — preview opens, encrypted block prepared, history.json updated, toast confirms
+- **Part 4 — Viewing past reports:** Open Metaweave-History-Viewer.html → link the same history.json → browse 4 tabs → filter → export Excel/CSV
+- **Part 5 — Troubleshooting:** Permission lost, file moved, Firefox/Safari users, history.json corruption recovery
+
+This guide is the source of truth for everything in the [History Viewer](/history/overview) section of these docs.
+
+## How they're built
+
+The seven docs are checked into `guidelines/metaweave/` as Markdown and rendered to PDF by `md_to_pdf.py`. Screenshots referenced from each doc live in `guidelines/metaweave/screenshots/` and are captured by the helper scripts in the same folder (one for the form, one for the viewer). Updates to the guidelines:
+
+1. Edit the `.md` file
+2. Re-run `python md_to_pdf.py` to regenerate the PDFs
+3. Re-distribute to the fleet
+
+## See also
+
+- [Submitting a report](/form/submitting) — the workflow detailed in `01-Metaweave-Forms-Guidelines.md`
+- [Filling reports](/form/filling-reports) — section-by-section field summary
+- [Setting up history.json](/history/setup) — the operational guide from `07-Settings-and-History.md`

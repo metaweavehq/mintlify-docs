@@ -1,0 +1,85 @@
+---
+title: "Water Treatment Analyzer"
+description: "Reviews boiler, cooling, and potable water chemistry — flags out-of-range parameters and equipment damage risk."
+---
+
+## What it does
+
+The **Water Treatment Analyzer** reviews water chemistry across a vessel's systems — boiler water, cooling water, potable water, fresh-water generator output. It evaluates parameter compliance with maker spec, identifies trends pointing to equipment risk (chloride ingress, scaling, microbiological contamination), and produces a senior review.
+
+It pairs with the [Water Treatment Data Collector](/skills/water-treatment-data-collector): one fetches, one interprets.
+
+## When to use it
+
+- "Water chemistry OK?"
+- "Boiler condition?"
+- "Check cooling water"
+- "FWG salinity"
+- "Lab review for water"
+
+## What it looks at
+
+- Boiler water: pH, conductivity, hardness, phosphate, chloride
+- Cooling water: pH, conductivity, nitrite, chloride, microbial
+- Potable water: chlorine, hardness, microbial, salinity
+- Fresh-water generator output: salinity, conductivity
+- Chemical dosing rates and ROB
+- Trend across the last three samples per system
+
+## How it works
+
+### 1. Parameter compliance
+
+Each parameter is compared against the maker / equipment-specific spec. Out-of-range values are flagged WARNING; outside the wider safety envelope, CRITICAL.
+
+### 2. Equipment damage risk
+
+Specific patterns map to specific risks:
+
+- Boiler chloride above limit → tube corrosion / failure
+- Cooling chloride above limit → seawater ingress
+- Cooling pH falling → general corrosion
+- Microbial counts rising → biofilm and pitting
+- FWG salinity rising → membrane / heat exchanger fault
+
+### 3. Dosing review
+
+Chemical ROB and dosing rates are evaluated against expected consumption. Under-dosing or running out is a near-term equipment risk.
+
+### 4. Trend assessment
+
+Three-sample trend per parameter classifies systems as Improving / Stable / Deteriorating, regardless of whether the latest value is in spec. Trend slope is computed as:
+
+$$
+\text{slope} = \frac{x_n - x_{n-2}}{2 \times \Delta t}
+$$
+
+A positive slope on an upper-bounded parameter (chloride, conductivity) is flagged Deteriorating; the same on a lower-bounded parameter (pH, nitrite) is flagged Improving. Direction matters, not just magnitude.
+
+## What the review contains
+
+- Executive summary with overall water posture per system
+- Per-system parameter table with verdict
+- Out-of-range values with associated equipment risk
+- Dosing review and chemical ROB
+- Trend per parameter
+- Recommendations (dosing change, equipment inspection, sample re-run)
+- Escalation decision
+
+## Escalation
+
+Escalates to the Technical Superintendent when:
+
+| Trigger | Severity |
+|---------|----------|
+| Boiler chloride above critical limit | CRITICAL |
+| Cooling chloride above critical limit (seawater ingress suspected) | CRITICAL |
+| FWG salinity rising trend | HIGH |
+| Microbial count above safety limit | HIGH |
+| Chemical out of stock with no resupply planned | HIGH |
+
+## Related skills
+
+- **water-treatment-data-collector** — junior skill that gathers chemistry results
+- **fuel-oil-analyzer** — paired bunker review
+- **status-rollup** — fleet-wide aggregation

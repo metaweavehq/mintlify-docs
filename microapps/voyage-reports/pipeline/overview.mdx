@@ -1,0 +1,77 @@
+---
+title: "Pipeline overview"
+description: "ETL flow from Outlook email to a row in PostgreSQL."
+---
+
+The Metaweave pipeline is a **Python ETL** that consumes the form's emails, decrypts them, and upserts to PostgreSQL. It runs as a single CLI — `python -m src.main` — with no daemon, no queue, no message broker. Designed to be triggered on a schedule.
+
+## Data flow
+
+```text
+Vessel-side form (HTML)
+       │
+       ▼  Submit → AES-128-CBC encrypted JSON in email body
+       │
+Microsoft Outlook  ─── shared mailbox ────►
+       │
+       ▼  fetch unread "Metaweave Forms:" emails
+       │
+src/fetcher.py        ← Microsoft Graph API + MSAL OAuth2
+       │
+       ▼  body text + parsed subject (vessel, type, date)
+       │
+src/parser.py         ← extract BEGIN/END markers, AES decrypt → JSON dict
+       │
+       ▼  ParseResult(form_data, report_type_raw, form_version)
+       │
+src/mapper.py         ← 92 scalars + 11 arrays → SQLAlchemy model objects
+       │
+       ▼  dict { vessel_info, voyage_no, report, events, bunker_rob, … }
+       │
+src/writer.py         ← upsert Vessel, upsert Voyage, delete-then-insert Report + children
+       │
+       ▼  CASCADE delete on report replacement
+       │
+PostgreSQL (Cloud SQL)
+       │
+17 metaweave_* tables: Vessel → Voyage → Report → 11 child tables
+```
+
+## Stages
+
+<CardGroup cols={2}>
+  <Card title="Fetcher" icon="envelope" href="/pipeline/etl-stages#fetcher">
+    Microsoft Graph API. OAuth2 client credentials. Filters unread emails by subject pattern. Marks as read after fetch.
+  </Card>
+  <Card title="Parser" icon="key" href="/pipeline/etl-stages#parser">
+    Extracts the encrypted block between BEGIN/END markers. AES-128-CBC + PKCS7 + base64. Falls back to regex parsing for hand-edited emails.
+  </Card>
+  <Card title="Mapper" icon="arrows-turn-right" href="/pipeline/etl-stages#mapper">
+    92 scalar fields + 11 arrays → SQLAlchemy model instances. DMS → decimal coords, datetime parsing, type coercion.
+  </Card>
+  <Card title="Writer" icon="database" href="/pipeline/etl-stages#writer">
+    Upsert Vessel by IMO, upsert Voyage by (vessel, voyage_number), delete-then-insert Report by (vessel, report_type, report_datetime_utc) with CASCADE.
+  </Card>
+</CardGroup>
+
+## Designed for
+
+- **Scheduled invocation** — typically every 5–15 minutes via cron or a serverless scheduler
+- **Idempotent reads** — marks emails as read after fetch, so a re-run won't re-process
+- **Safe re-submissions** — corrections replace previous rows by design (CASCADE delete + insert)
+- **Single mailbox per fleet** — one shared Outlook mailbox is the input; the script loops every unread email
+
+## Not designed for
+
+- High volume (>10,000 emails/run) — sequential processing, single thread
+- Multi-tenant — one Azure app registration → one mailbox → one Postgres database
+- Real-time delivery — there's a polling delay between Submit and ingest (driven by your cron cadence)
+
+## See also
+
+- [Installation](/pipeline/installation) — venv, dependencies, Cloud SQL setup
+- [Running](/pipeline/running) — `python -m src.main` flags and modes
+- [ETL stages](/pipeline/etl-stages) — fetcher / parser / mapper / writer in detail
+- [Data model](/pipeline/data-model) — the 17 SQLAlchemy tables
+- [Bootstrap scripts](/history/bootstrap-scripts) — `excel_to_history.py` and `generate_metaweave_test_history.py` (in `history-tools/`)
+- [Configuration](/pipeline/configuration) — environment variables

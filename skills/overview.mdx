@@ -1,19 +1,94 @@
 ---
-title: "Skills"
-description: "Reusable capabilities that extend agent functionality"
+title: "Overview"
+sidebarTitle: "Overview"
+description: "Reusable capabilities that extend agents — collectors, analyzers, and tools across maritime operations, documents, and reporting."
 ---
 
-# Skills
+## What skills are
 
-Skills are modular, reusable capabilities that can be attached to agents to extend their functionality.
+Skills are modular, reusable capabilities that agents invoke to do real work. Each skill packages a workflow — what it reads, what it produces, when to use it — into a portable unit any agent can call. The same skill works equally well for a senior agent reviewing a vessel and a human operator running a one-off check.
 
-## What are skills?
+The library currently has 44 skills grouped into four areas: **collectors** that gather evidence, **analyzers** that turn that evidence into senior reviews, **document tools** that index and search the maritime knowledge base, and **utilities** for reports, images, and intelligence queries.
 
-Skills encapsulate domain-specific knowledge and workflows into portable units that any agent can use. They define prompts, tools, and logic for specific tasks.
+## How skills compose
 
-## Key capabilities
+Most maritime work follows a two-stage pattern:
 
-- **Modular design** — Skills are self-contained and can be composed together
-- **Reusable** — Attach the same skill to multiple agents
-- **Customizable** — Configure skills with parameters to fit your use case
-- **Shareable** — Publish and share skills across teams
+1. A **data collector** fetches the latest evidence for a vessel domain (engine telemetry, certificates, defects, etc.) and files it as a timestamped, append-only record.
+2. An **analyzer** reads that evidence, runs a deterministic analysis script, and produces a senior expert review with prioritised actions and an escalation decision.
+
+Splitting the two means analyses are reproducible (re-runnable without re-fetching), auditable (every number traces to evidence), and cheap to operate (collection is a database query, analysis is one model call).
+
+## Categories
+
+### Collectors — gather evidence
+
+Per-vessel data collectors that snapshot a single domain:
+
+- [AE Performance](/skills/ae-performance-data-collector), [ME Performance](/skills/me-performance-data-collector), [ME Microapp](/skills/me-performance-microapp-data) — engine telemetry
+- [Fuel Oil](/skills/fuel-oil-data-collector), [Lube Oil](/skills/lube-oil-data-collector), [Water Treatment](/skills/water-treatment-data-collector) — fluids and chemistry
+- [Certificates](/skills/certificates-data-collector), [Class Society](/skills/class-society-data), [Compliance](/skills/compliance-data-collector) — regulatory and class
+- [Crew](/skills/crew-data-collector), [PMS](/skills/pms-data-collector), [Defects](/skills/defect-data-collector) — manning and maintenance
+- [Voyage](/skills/voyage-data-collector), [Purchase](/skills/purchase-data-collector), [Financial](/skills/financial-data-collector), [Forms](/skills/forms-data-collector) — operations and admin
+- [CII / Emissions](/skills/cii-emissions-microapp-data) — emissions microapp evidence with screenshots
+
+### Analyzers — produce senior reviews
+
+Senior agents that turn collector evidence into TSI-grade reviews with escalation logic:
+
+- [AE Performance](/skills/ae-performance-analyzer), [ME Performance](/skills/me-performance-analyzer) — engine reviews with SFOC variance, blackout risk, overhaul timing
+- [Fuel Oil](/skills/fuel-oil-analyzer), [Lube Oil](/skills/lube-oil-analyzer), [Water Treatment](/skills/water-treatment-analyzer) — fluid and chemistry reviews
+- [Certificates](/skills/certificates-analyzer), [Class Society](/skills/class-society-analyzer), [Compliance](/skills/compliance-analyzer) — detention-risk and compliance
+- [Crew](/skills/crew-analyzer), [PMS](/skills/pms-analyzer), [Defects](/skills/defect-analyzer) — manning, maintenance, defect reviews
+- [Voyage](/skills/voyage-analyzer), [Purchase](/skills/purchase-analyzer), [Financial](/skills/financial-analyzer), [Forms](/skills/forms-analyzer) — operations, procurement, budget reviews
+
+### Documents &amp; knowledge
+
+Tools that turn the maritime corpus into searchable, citable knowledge:
+
+- [Search Indexed Documents](/skills/search-indexed-documents) — search circulars, IMPA, IMO, manuals with exact-quote evidence
+- [PDF to Markdown](/skills/pdf-to-markdown) — bulk convert PDFs to searchable markdown with embedded page images
+- [PDF Vision Extractor](/skills/pdf-vision-extractor) — high-accuracy tiled extraction for diagrams and tables
+- [Download Flag Circulars](/skills/download-flag-circulars), [Download Makers Circulars](/skills/download-makers-circulars) — keep the corpus current
+- [Vessel Intelligence](/skills/vessel-intelligence) — query and write observations, notes, and learnings linked to cases
+- [Outlook Email Sync](/skills/outlook-email-sync) — sync mailbox into a searchable local index
+
+### Reports &amp; utilities
+
+Cross-cutting tools used during inspections, investigations, and reporting:
+
+- [Maritime Report Generator](/skills/maritime-report-generator) — turns inspection photos + vessel data into polished VIR / Owner's / Incident reports
+- [QHSE Investigation Report](/skills/qhse-investigation-report) — cross-domain Quality, Health, Safety, Environment investigation
+- [Image Analysis](/skills/image-analysis) — vessel-mode equipment classification or general-mode description
+- [Image Generator](/skills/image-generator) — AI image generation
+- [Validate Consumption Log Data](/skills/validate-consumption-log-data) — pre-upload data quality check for CII, EU MRV, IMO DCS, FuelEU
+
+## How a typical review flows
+
+```
+User asks "How are the AEs on POSUN?"
+        │
+        ▼
+ae-performance-data-collector
+   fetches telemetry, files evidence
+        │
+        ▼
+ae-performance-analyzer
+   runs analysis script
+   writes senior review
+   decides escalation
+        │
+        ▼
+   ┌────┴────┐
+   │         │
+   OK     Escalation
+            │
+            ▼
+   tsi-review picks up the case
+```
+
+The same pattern applies across every domain — engines, certificates, crew, voyages, finance — which means anyone reviewing fleet status sees the same shape of evidence regardless of who or what produced it.
+
+## Why script-driven analysis
+
+Pattern detection, threshold logic, and cost calculation all live in deterministic analysis scripts — not in the language model. The model interprets results into a narrative review; it doesn't recompute. Reviews stay **consistent across vessels**, **auditable** (every number traces to source evidence), and **cheap to run**.

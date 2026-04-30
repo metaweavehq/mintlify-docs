@@ -3,42 +3,24 @@
   "theme": "mint",
   "name": "Applied AI Foundation",
   "colors": {
-    "primary": "#0EA5E9",
-    "light": "#38BDF8",
-    "dark": "#0284C7"
+    "primary": "#111111",
+    "light": "#9CA3AF",
+    "dark": "#000000"
   },
   "favicon": "/favicon.svg",
+  "appearance": {
+    "default": "light"
+  },
+  "styling": {
+    "codeblocks": "system",
+    "eyebrows": "section",
+    "content-width": "wide"
+  },
+  "fonts": {
+    "family": "SF Pro Display"
+  },
   "navigation": {
     "tabs": [
-      {
-        "tab": "Documentation",
-        "groups": [
-          {
-            "group": "Getting Started",
-            "pages": [
-              "index",
-              "about",
-              "mission"
-            ]
-          },
-          {
-            "group": "Platform",
-            "pages": [
-              "platform/lifeverse-ai",
-              "platform/multi-agent-architecture",
-              "platform/open-source"
-            ]
-          },
-          {
-            "group": "Programs",
-            "pages": [
-              "programs/maritime-ai",
-              "programs/research",
-              "programs/partnerships"
-            ]
-          }
-        ]
-      },
       {
         "tab": "Agents",
         "groups": [
@@ -54,9 +36,53 @@
         "tab": "Skills",
         "groups": [
           {
-            "group": "Skills",
+            "group": " ",
             "pages": [
-              "skills/overview"
+              "skills/overview",
+              "skills/ae-performance-analyzer",
+              "skills/ae-performance-data-collector",
+              "skills/certificates-analyzer",
+              "skills/certificates-data-collector",
+              "skills/cii-emissions-microapp-data",
+              "skills/class-society-analyzer",
+              "skills/class-society-data",
+              "skills/compliance-analyzer",
+              "skills/compliance-data-collector",
+              "skills/crew-analyzer",
+              "skills/crew-data-collector",
+              "skills/defect-analyzer",
+              "skills/defect-data-collector",
+              "skills/download-flag-circulars",
+              "skills/download-makers-circulars",
+              "skills/financial-analyzer",
+              "skills/financial-data-collector",
+              "skills/forms-analyzer",
+              "skills/forms-data-collector",
+              "skills/fuel-oil-analyzer",
+              "skills/fuel-oil-data-collector",
+              "skills/image-analysis",
+              "skills/image-generator",
+              "skills/lube-oil-analyzer",
+              "skills/lube-oil-data-collector",
+              "skills/maritime-report-generator",
+              "skills/me-performance-analyzer",
+              "skills/me-performance-data-collector",
+              "skills/me-performance-microapp-data",
+              "skills/outlook-email-sync",
+              "skills/pdf-to-markdown",
+              "skills/pdf-vision-extractor",
+              "skills/pms-analyzer",
+              "skills/pms-data-collector",
+              "skills/purchase-analyzer",
+              "skills/purchase-data-collector",
+              "skills/qhse-investigation-report",
+              "skills/search-indexed-documents",
+              "skills/validate-consumption-log-data",
+              "skills/vessel-intelligence",
+              "skills/voyage-analyzer",
+              "skills/voyage-data-collector",
+              "skills/water-treatment-analyzer",
+              "skills/water-treatment-data-collector"
             ]
           }
         ]
@@ -127,6 +153,108 @@
                     ]
                   }
                 ]
+              },
+              {
+                "group": "Voyage Reports",
+                "pages": [
+                  "microapps/voyage-reports/introduction",
+                  "microapps/voyage-reports/quickstart",
+                  {
+                    "group": "The Form",
+                    "pages": [
+                      "microapps/voyage-reports/form/overview",
+                      "microapps/voyage-reports/form/filling-reports",
+                      "microapps/voyage-reports/form/submitting",
+                      "microapps/voyage-reports/form/validation",
+                      "microapps/voyage-reports/form/guidelines-pdf"
+                    ]
+                  },
+                  {
+                    "group": "History Viewer",
+                    "pages": [
+                      "microapps/voyage-reports/history/overview",
+                      "microapps/voyage-reports/history/viewing",
+                      "microapps/voyage-reports/history/setup",
+                      "microapps/voyage-reports/history/data-format",
+                      "microapps/voyage-reports/history/bootstrap-scripts"
+                    ]
+                  },
+                  {
+                    "group": "Guidelines",
+                    "pages": [
+                      "microapps/voyage-reports/guidelines/forms-guidelines",
+                      "microapps/voyage-reports/guidelines/event-scenarios",
+                      "microapps/voyage-reports/guidelines/cargo-discharge-heating",
+                      "microapps/voyage-reports/guidelines/sts-ice-emergency",
+                      "microapps/voyage-reports/guidelines/new-reports",
+                      "microapps/voyage-reports/guidelines/bunker-report",
+                      "microapps/voyage-reports/guidelines/settings-history"
+                    ]
+                  },
+                  {
+                    "group": "Ingest Pipeline",
+                    "pages": [
+                      "microapps/voyage-reports/pipeline/overview",
+                      "microapps/voyage-reports/pipeline/installation",
+                      "microapps/voyage-reports/pipeline/running",
+                      "microapps/voyage-reports/pipeline/etl-stages",
+                      "microapps/voyage-reports/pipeline/data-model",
+                      "microapps/voyage-reports/pipeline/configuration"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "BWTS Monitoring",
+                "pages": [
+                  "microapps/bwts/introduction",
+                  "microapps/bwts/quickstart",
+                  {
+                    "group": "Concepts",
+                    "pages": [
+                      "microapps/bwts/concepts/bwts-overview",
+                      "microapps/bwts/concepts/uv-disinfection",
+                      "microapps/bwts/concepts/imo-d2-regulation",
+                      "microapps/bwts/concepts/uscg-standards"
+                    ]
+                  },
+                  {
+                    "group": "Product Tour",
+                    "pages": [
+                      "microapps/bwts/product/overview-tab",
+                      "microapps/bwts/product/predictive-maintenance-tab",
+                      "microapps/bwts/product/trend-analysis-tab",
+                      "microapps/bwts/product/compliance-tab",
+                      "microapps/bwts/product/comparative-analysis-tab",
+                      "microapps/bwts/product/data-export-tab"
+                    ]
+                  },
+                  {
+                    "group": "Methodology",
+                    "pages": [
+                      "microapps/bwts/methodology/health-score",
+                      "microapps/bwts/methodology/rul-algorithm",
+                      "microapps/bwts/methodology/uv-thresholds",
+                      "microapps/bwts/methodology/progressive-loading"
+                    ]
+                  },
+                  {
+                    "group": "Data Reference",
+                    "pages": [
+                      "microapps/bwts/data/schema-overview",
+                      "microapps/bwts/data/telemetry-fields",
+                      "microapps/bwts/data/api-reference"
+                    ]
+                  },
+                  {
+                    "group": "Internal Engineering",
+                    "pages": [
+                      "microapps/bwts/internal/architecture",
+                      "microapps/bwts/internal/tech-stack",
+                      "microapps/bwts/internal/environment-variables"
+                    ]
+                  }
+                ]
               }
             ]
           }
@@ -139,27 +267,6 @@
             "group": "Document Search",
             "pages": [
               "document-search/overview"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Community",
-        "groups": [
-          {
-            "group": "Contributing",
-            "pages": [
-              "community/contributing",
-              "community/code-of-conduct",
-              "community/roadmap"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "guides/getting-started",
-              "guides/building-agents",
-              "guides/deployment"
             ]
           }
         ]
@@ -180,7 +287,7 @@
     "primary": {
       "type": "button",
       "label": "Get Started",
-      "href": "/guides/getting-started"
+      "href": "/agents/overview"
     }
   },
   "footer": {

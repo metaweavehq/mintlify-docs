@@ -1,0 +1,55 @@
+---
+title: "PDF Vision Extractor"
+description: "Tiled AI-vision extraction for accurate Q&A on engineering diagrams, maintenance tables, and complex PDF pages."
+---
+
+## What it does
+
+The **PDF Vision Extractor** is the precision counterpart to [PDF to Markdown](/skills/pdf-to-markdown). Where PDF-to-Markdown is built for bulk indexing, this skill is built for **accurate interactive extraction** from a small number of pages — engineering diagrams, maintenance schedules with dense tables, scanned forms with poor text quality.
+
+It splits each page into overlapping tiles, runs vision inference on each tile, and merges results back into clean structured output. The tiling preserves detail that whole-page vision typically loses.
+
+## When to use it
+
+- "What does this diagram show?"
+- "Read this table from the PDF"
+- "Extract pages 5–10"
+- "What are the maintenance intervals in this manual?"
+- Standard text extraction returned garbled results
+
+## When **not** to use it
+
+For converting whole document libraries for search, use [PDF to Markdown](/skills/pdf-to-markdown). It's faster and produces the search index this skill does not.
+
+## Comparison
+
+| | PDF Vision Extractor | PDF to Markdown |
+|---|---|---|
+| Purpose | Accurate Q&amp;A on specific pages | Bulk indexing for search |
+| Processing | Tiled vision with overlap | Whole-page vision |
+| Accuracy | Highest — recovers fine detail | Good — fast at scale |
+| Output | One consolidated markdown | Per-page files + search index |
+| Query-focused | Yes | No |
+
+## How it works
+
+1. Renders each requested PDF page at high resolution.
+2. Splits each page into overlapping tiles so detail at tile boundaries isn't lost.
+3. Runs vision inference on each tile with a layout-aware prompt.
+4. Merges tile output, deduplicating overlap, into clean per-page markdown.
+5. Optionally answers a specific question using only the extracted content.
+
+## Modes
+
+- **Single page** — extract one specific page
+- **Page range** — extract a contiguous range
+- **Query mode** — extract and immediately answer a focused question against the extracted content
+
+## Why tiling matters
+
+Whole-page vision tends to summarise and miss small text, fine table cells, and dimensions on engineering drawings. Tiling forces the model to attend to local detail — at the cost of slower processing, which is acceptable for a few critical pages.
+
+## Related skills
+
+- **pdf-to-markdown** — bulk converter for full document libraries
+- **search-indexed-documents** — search across the converted library

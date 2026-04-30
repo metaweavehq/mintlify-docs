@@ -1,0 +1,124 @@
+---
+title: "Installation"
+description: "Set up the pipeline in a venv with Cloud SQL Connector and Azure access."
+---
+
+The Metaweave pipeline is a Python package that ingests submissions into PostgreSQL. It runs as a single CLI on a schedule.
+
+## Prerequisites
+
+- **Python 3.12+**
+- A **Google Cloud SQL** Postgres instance (and a service account JSON with access)
+- An **Azure AD app registration** with `Mail.Read` and `Mail.ReadWrite` permissions on the shared Outlook mailbox
+- Network access to:
+  - `graph.microsoft.com`
+  - `login.microsoftonline.com`
+  - `sqladmin.googleapis.com` (for Cloud SQL Connector)
+
+## Set up the venv
+
+```bash
+cd metaweave/pipeline
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+Editable install means changes to `src/` are picked up without re-installing.
+
+## Dependencies
+
+Pulled in from `pyproject.toml`:
+
+| Package | Why |
+|---|---|
+| `pycryptodome` | AES-128-CBC decryption |
+| `sqlalchemy` ≥2.0 | ORM + declarative models |
+| `cloud-sql-python-connector[pg8000]` | GCP Cloud SQL Connector |
+| `pg8000` | Pure-Python PostgreSQL dialect |
+| `psycopg2-binary` | Fallback PostgreSQL driver |
+| `alembic` | Schema migrations (included, not yet used) |
+| `msal` | Microsoft identity library (OAuth2 client credentials) |
+| `requests` | HTTP client for Microsoft Graph |
+| `python-dotenv` | `.env` loading |
+
+Dev deps: `pytest`, `pytest-cov`.
+
+## Configure environment variables
+
+Create a `.env` in the `pipeline/` directory (or set them in your shell). Required variables:
+
+```bash
+# Azure AD app registration
+AZURE_TENANT_ID=...
+AZURE_CLIENT_ID=...
+AZURE_CLIENT_SECRET=...
+OUTLOOK_USER_EMAIL=metaweave-forms@yourcompany.com
+
+# Cloud SQL
+GOOGLE_SERVICE_ACCOUNT_BASE64=eyJ0eXBlIjoi...    # base64 of the service account JSON
+CLOUD_SQL_INSTANCE_CONNECTION_NAME=project:region:instance
+POSTGRES_USER=...
+POSTGRES_PASSWORD=...
+POSTGRES_DB=...
+
+# Encryption (defaults to `mw7k2x9p4q8n3v5h` if unset)
+MW_AES_KEY=mw7k2x9p4q8n3v5h
+```
+
+See [Configuration](/pipeline/configuration) for the full list of variables.
+
+## Create the database tables
+
+First-time setup:
+
+```bash
+python -m src.main --create-tables
+```
+
+This calls `Base.metadata.create_all(engine)` and exits. It's idempotent — re-running on an existing schema is a no-op.
+
+The 17 tables it creates:
+
+```text
+metaweave_vessel              metaweave_bunker_delivery
+metaweave_fuel_type           metaweave_bunker_biofuel
+metaweave_voyage              metaweave_sof_activity
+metaweave_report              metaweave_report_cargo
+metaweave_report_event        metaweave_month_end_bunker_report
+metaweave_event_fuel_consumption  metaweave_berthing_details
+metaweave_report_bunker_rob   metaweave_report_delay
+metaweave_report_upcoming_port
+metaweave_report_fowe_period
+metaweave_report_scrubber_breakdown
+```
+
+See [Data model](/pipeline/data-model) for the relationships.
+
+## Verify the install
+
+Run a single email through end-to-end without touching Outlook:
+
+```bash
+python -m src.main --file /path/to/sample-email.txt
+```
+
+`--file` reads the body from disk, runs Parse → Map → Write, and exits. Useful for testing without consuming a real mailbox message.
+
+## Run the tests
+
+```bash
+pytest -v
+```
+
+Tests use SQLite in-memory with `PRAGMA foreign_keys=ON` — no PostgreSQL needed.
+
+```bash
+pytest --cov=src tests/   # with coverage
+```
+
+## See also
+
+- [Running](/pipeline/running) — operational invocation patterns
+- [Configuration](/pipeline/configuration) — every env var
+- [ETL stages](/pipeline/etl-stages) — what happens internally

@@ -1,0 +1,95 @@
+---
+title: "Class Society Analyzer"
+description: "Reviews class society survey portfolios for overdue items, recurring findings, and PSC detention risk — produces a senior-level expert review."
+---
+
+## What it does
+
+The **Class Society Analyzer** examines a vessel's class survey portfolio — overall status, individual surveys, conditions of class, outstanding findings — and produces a senior compliance review. It evaluates due-window pressure, finding severity, recurring deficiency patterns, and **PSC detention risk** stemming from class issues.
+
+It pairs with the [Class Society Data Collector](/skills/class-society-data). The collector scrapes the class portal; the analyzer interprets what was found.
+
+## When to use it
+
+- "How are surveys?"
+- "Class status on AQUILA"
+- "Any PSC risk from surveys?"
+- "Run class review"
+- "Survey compliance check"
+
+## What it looks at
+
+- Overall class status (in-class, recommendations, conditions)
+- Each survey's due date, completion state, and credit status
+- Conditions of class with deadlines
+- Outstanding and recently closed findings
+- Asset (machinery / equipment) condition flags
+- Recurring deficiency themes across surveys
+
+## How it works
+
+### 1. Survey portfolio mapping
+
+Every survey in the portfolio is bucketed by status:
+
+- **OVERDUE** — past due date, vessel non-compliant
+- **DUE SOON** — within 30 days
+- **PLANNED** — 30–90 days, port-call coordination
+- **CURRENT** — credited and within window
+
+### 2. Findings analysis
+
+The script clusters findings by:
+
+- Severity (critical / major / minor)
+- Equipment / system affected
+- Status (open, closed, follow-up required)
+- Age (how long open)
+
+Old open findings and clusters of repeat issues on the same equipment are flagged as systemic concerns — not individual incidents.
+
+### 3. Conditions of class
+
+Each Condition of Class is tracked against its deadline. A condition approaching its window adds a multiplier to detention risk because failure to clear it suspends class.
+
+### 4. PSC detention-risk score
+
+A weighted composite combines five contributing factors:
+
+$$
+\text{Risk score} = w_1 S_\text{overdue} + w_2 F_\text{critical} + w_3 C_\text{cond} + w_4 R_\text{recur} + w_5 P_\text{psc}
+$$
+
+Where $S_\text{overdue}$ is overdue surveys, $F_\text{critical}$ is open critical findings, $C_\text{cond}$ is conditions of class within 30 days, $R_\text{recur}$ is recurring deficiency themes, and $P_\text{psc}$ is recent PSC inspection density. The composite maps to LOW / MEDIUM / HIGH / CRITICAL bands.
+
+## What the review contains
+
+- Executive summary with overall class status
+- Survey table — each survey's status, due date, credit
+- Findings analysis — severity distribution, age, recurring themes
+- Conditions of class — deadlines and remediation plan
+- PSC detention-risk assessment with contributing factors
+- Recommendations prioritized by deadline and impact
+- Escalation decision
+
+## Escalation
+
+The analyzer escalates to a Technical Superintendent automatically when:
+
+| Trigger | Severity |
+|---------|----------|
+| Any survey overdue | CRITICAL |
+| Condition of class within 30 days unresolved | CRITICAL |
+| Open critical finding older than 60 days | HIGH |
+| Recurring deficiency theme (3+ findings on same system) | HIGH |
+| Class status downgraded | CRITICAL |
+
+## Why script-driven
+
+Survey-state logic, age clustering, and risk-score weighting all live in the analysis script — not the language model. Reviews stay consistent across vessels and audits.
+
+## Related skills
+
+- **class-society-data** — junior skill that scrapes the class portal
+- **certificates-analyzer** — paired statutory/flag certificate review
+- **status-rollup** — fleet-wide compliance aggregation

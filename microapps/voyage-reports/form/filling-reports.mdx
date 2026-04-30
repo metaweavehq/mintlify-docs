@@ -1,0 +1,189 @@
+---
+title: "Filling reports"
+description: "Section-by-section walkthrough of each report type — what to type, what's auto-calculated, and what's optional."
+---
+
+Each tab has a slightly different field set. This page covers the five visible reports. The full crew-facing field-by-field reference lives in `01-Metaweave-Forms-Guidelines.md`.
+
+## Noon Report
+
+The most common report. Sent every day at noon, At Sea or In Port. A Noon is **not required** only if an Arrival or Departure falls exactly at noon local time on that date.
+
+### Vessel (pre-populated)
+
+<Frame caption="Vessel block — IMO, name, code. Verify before filling anything else.">
+  <img src="/images/form/noon-vessel.png" alt="Vessel block" />
+</Frame>
+
+If the vessel name or IMO is wrong, **stop and ask the office for a fresh template** — these come baked in via the Settings export step.
+
+### Voyage
+
+<Frame caption="Voyage section. Mandatory fields show a blue left border.">
+  <img src="/images/form/noon-voyage.png" alt="Voyage section" />
+</Frame>
+
+Key fields:
+
+- **Voyage Number** — current voyage (e.g. `33`, `33L`, `33-1`)
+- **Location** — `In Port` or `At Sea`. **Several downstream sections appear/disappear based on this.**
+- **Date/Time** — local time + GMT offset dropdown
+- **Latitude / Longitude** — `DD MM' SS" N/S` and `DD MM' SS" E/W`. Auto-formats on tab-out
+- **Vessel Condition** — `Ballast` / `Laden`
+- **Port** — autocomplete (don't free-type)
+- **Within Ice Edge / Refuge Port Call / STS Operation** — Yes/No flags
+- **Upcoming Ports table** *(At-Sea only)* — next port + ETA + distance to go
+
+### Distance and Vessel
+
+<Frame caption="Distance and engine fields. Read-only fields show on grey backgrounds.">
+  <img src="/images/form/noon-distance-vessel.png" alt="Distance section" />
+</Frame>
+
+You type:
+
+- CP/Ordered Speed, Observed Distance, Engine Distance, Speed Log Distance
+- Steaming Hours, Main Engine Hours
+- Main Engine Revs, Main Engine KWhrs, ME Output %
+- Generator 1–4 Hours
+- Aux Boiler Hours, Incinerator Hours, FW Generator Hours
+- Avg Cargo Temp, Heading
+
+The form auto-calculates: Slip %, Reported Speed, Average RPM, Average KW, Generator KWhrs.
+
+### Weather
+
+<Frame caption="Weather block — wind force/direction, sea state, swell, visibility, temperatures, pressure.">
+  <img src="/images/form/noon-weather.png" alt="Weather section" />
+</Frame>
+
+### Events
+
+The Events block changes shape based on whether the vessel is At Sea or In Port.
+
+<CardGroup cols={2}>
+  <Card title="At Sea events">
+    <Frame>
+      <img src="/images/form/noon-events-at-sea.png" alt="At-sea events" />
+    </Frame>
+    Drifting, weather, breakdown, restricted area, etc. Each event has its own per-fuel consumption breakdown.
+  </Card>
+  <Card title="In Port events">
+    <Frame>
+      <img src="/images/form/noon-events-in-port.png" alt="In-port events" />
+    </Frame>
+    Loading, discharging, idle, bunkering, awaiting berth. Match each event to its fuel use.
+  </Card>
+</CardGroup>
+
+### Bunker ROB
+
+<Frame caption="Fuel ROB summary — one row per fuel type.">
+  <img src="/images/form/noon-bunker-rob.png" alt="Bunker ROB" />
+</Frame>
+
+Per fuel type: ROB start (auto from previous report), ROB end (you type), and the 12 consumption categories: propulsion, manoeuvre, generator, load/discharge, deballast, IGS, boiler, incinerator, cargo heating, tank cleaning, others, flushing.
+
+### Technical, Scrubber, FOWE, Slops & Fresh Water
+
+<CardGroup cols={2}>
+  <Card title="Technical Parameters">
+    <Frame>
+      <img src="/images/form/noon-tech-params.png" alt="Technical parameters" />
+    </Frame>
+  </Card>
+  <Card title="Scrubber">
+    <Frame>
+      <img src="/images/form/noon-scrubber.png" alt="Scrubber" />
+    </Frame>
+  </Card>
+  <Card title="FOWE System">
+    <Frame>
+      <img src="/images/form/noon-fowe.png" alt="FOWE system" />
+    </Frame>
+  </Card>
+  <Card title="Slops & Fresh Water">
+    <Frame>
+      <img src="/images/form/noon-slops-freshwater.png" alt="Slops and fresh water" />
+    </Frame>
+  </Card>
+</CardGroup>
+
+## Arrival Report
+
+<Frame caption="Arrival voyage section — fewer event types, EOSP-flavoured.">
+  <img src="/images/form/arrival-voyage.png" alt="Arrival voyage section" />
+</Frame>
+
+Same shape as Noon, sent at **End of Sea Passage (EOSP)**. Differences:
+
+- Location is always `At Sea` (you record EOSP, not yet in port)
+- Some sea-only fields tighten (e.g. distance fields cover the final leg only)
+- Required at every arrival regardless of whether a Noon already covered the day
+
+## Departure Report
+
+<Frame caption="Departure voyage section.">
+  <img src="/images/form/departure-voyage.png" alt="Departure voyage section" />
+</Frame>
+
+Sent at **Commencement of Sea Passage (COSP)**. Same shape as Arrival but with an extra **Berthing Details** sub-section:
+
+<Frame caption="Berthing details — terminal, first-line-ashore, all-fast, clear-berth, tugs.">
+  <img src="/images/form/departure-berthing.png" alt="Departure berthing details" />
+</Frame>
+
+Capture: terminal name, first line ashore time, all-fast time, clear-berth time, tugs in/out.
+
+## Bunker Report
+
+A specialised report for bunker lifts — separate from the consumption you log in Noon.
+
+<Frame caption="Bunker Report voyage section.">
+  <img src="/images/form/bunker-report-voyage.png" alt="Bunker voyage section" />
+</Frame>
+
+The core block is the **BDN table** — one row per fuel grade lifted:
+
+<Frame caption="BDN table — supplier, BDN number, fuel grade, quantity, density, sulphur, viscosity, LCV.">
+  <img src="/images/form/bunker-report-bdn.png" alt="BDN table" />
+</Frame>
+
+For biofuel blends, two extra dialogs:
+
+<CardGroup cols={2}>
+  <Card title="Bio Fuel dialog">
+    <Frame>
+      <img src="/images/form/bunker-report-biofuel-dialog.png" alt="Bio fuel dialog" />
+    </Frame>
+    Per-feedstock: feedstock name, ISCC certificate, GHG intensity, sustainability tag.
+  </Card>
+  <Card title="Blend Component dialog">
+    <Frame>
+      <img src="/images/form/bunker-report-blend-dialog.png" alt="Blend component dialog" />
+    </Frame>
+    Per-component fossil fuel: percentage, density, sulphur.
+  </Card>
+</CardGroup>
+
+Plus barge timestamps: barge alongside, hose connected, commenced bunkering, bunkering completed, hose disconnected, barge cast off.
+
+## Statement of Facts (SOF)
+
+<Frame caption="SOF voyage section.">
+  <img src="/images/form/sof-voyage.png" alt="SOF voyage section" />
+</Frame>
+
+After cargo ops at one port. The unique block is the **Port Activity** table — one row per activity (anchor, pilot on board, NOR tendered, all fast, hoses connected, commenced cargo, completed cargo, hoses disconnected, departure):
+
+<Frame caption="SOF port activity table.">
+  <img src="/images/form/sof-port-survey.png" alt="SOF port activities" />
+</Frame>
+
+Plus a Cargo Details table with B/L number, gross/net by ship and shore figures.
+
+## See also
+
+- [Submitting](/form/submitting) — the Submit modal flow
+- [Validation](/form/validation) — required fields and validation limits
+- [Guidelines PDFs](/form/guidelines-pdf) — `01-Metaweave-Forms-Guidelines.md` is the field-by-field crew reference

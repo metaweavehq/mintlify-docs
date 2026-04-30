@@ -1,0 +1,45 @@
+---
+title: "Compliance Data Collector"
+description: "Junior skill that fetches PSC, SIRE, VIR, and CII data for a vessel and files it as evidence."
+---
+
+## What it does
+
+The **Compliance Data Collector** pulls a vessel's compliance evidence from the configured source — PSC inspection records, SIRE / VIR reports, CII numbers — and files a timestamped snapshot. It pairs with the [Compliance Analyzer](/skills/compliance-analyzer): one fetches, one interprets.
+
+The collector makes no judgements. It captures what the source system reports, exactly as reported.
+
+## When to use it
+
+- "Get PSC data for AQUILA"
+- "Check SIRE status"
+- "CII data refresh"
+- "Compliance collect"
+
+## What it captures
+
+- PSC inspection history with deficiencies, codes, severities, detention flags
+- SIRE / VIR observations with severity and operator-response status
+- CII attained and required values for the year
+- Detention history with port, date, finding category
+
+## How it works
+
+1. Looks up the vessel by IMO.
+2. Fetches the latest PSC, SIRE / VIR, and CII records from the configured source.
+3. Writes a timestamped evidence record under the vessel's compliance case folder.
+4. Updates the case so any reviewing agent can see new evidence is available.
+
+## What it produces
+
+- Structured compliance data consumed by the analyzer
+- Plain-English summary covering inspection counts, open observations, rating
+- Filing metadata (timestamp, source, sequence number)
+
+Every collection is append-only — historical compliance posture is preserved.
+
+## Related skills
+
+- **compliance-analyzer** — senior skill that turns this evidence into a compliance review
+- **certificates-data-collector** — sister collector for statutory certificates
+- **status-rollup** — fleet-wide compliance aggregation

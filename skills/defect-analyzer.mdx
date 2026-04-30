@@ -1,0 +1,92 @@
+---
+title: "Defect Analyzer"
+description: "Reviews defect tracking — open items, age, safety implications, closure rate — and escalates safety-critical issues."
+---
+
+## What it does
+
+The **Defect Analyzer** reviews a vessel's defect register, classifies findings by safety impact, identifies recurring equipment themes, and produces a senior review. It is the lens that turns a list of open items into prioritised action.
+
+It pairs with the [Defect Data Collector](/skills/defect-data-collector): one fetches, one interprets.
+
+## When to use it
+
+- "Defect status?"
+- "Equipment concerns?"
+- "Any open safety items?"
+- "Run defect review"
+- "Safety items on AQUILA"
+
+## What it looks at
+
+- Open defect count by criticality
+- Age of each open defect (especially &gt;90 days)
+- Equipment / system distribution (recurring themes)
+- Closure rate over time
+- Defects with safety, class, or PSC implications
+- Stuck defects (waiting on parts, port call, vendor)
+
+## How it works
+
+### 1. Severity classification
+
+Each defect is classified:
+
+| Class | Meaning |
+|-------|---------|
+| CRITICAL | Safety equipment, class condition, or PSC-flagging item |
+| MAJOR | Operationally significant — affects performance or compliance |
+| MINOR | Routine maintenance backlog |
+
+### 2. Age analysis
+
+Age tiers identify systemic issues:
+
+- **&gt;180 days open** — chronic, raises question on closure process
+- **90–180 days** — overdue
+- **30–90 days** — active
+- **&lt;30 days** — recent
+
+A spike of CRITICAL items older than 90 days is a major escalation trigger.
+
+### 3. Equipment-theme clustering
+
+The analyzer groups open defects by equipment family. Three or more defects on the same system points to a systemic issue, not isolated failures.
+
+### 4. Closure-rate trend
+
+Closure rate is tracked period-on-period:
+
+$$
+\text{Closure rate} = \frac{\text{Defects closed in period}}{\text{Open at start} + \text{Opened in period}}
+$$
+
+A closure rate falling for 2+ periods combined with a rising open count signals operational drift — the team is opening defects faster than they're closing them.
+
+## What the review contains
+
+- Executive summary with overall defect posture
+- Severity distribution and age breakdown
+- Equipment-theme clusters (likely systemic issues)
+- Stuck defects with blocker categorised (parts, port, vendor)
+- Closure-rate trend
+- Recommendations prioritised by safety impact and age
+- Escalation decision
+
+## Escalation
+
+Escalates to a Technical Superintendent automatically when:
+
+| Trigger | Severity |
+|---------|----------|
+| CRITICAL defect open &gt;30 days | CRITICAL |
+| Safety-equipment defect open at all | CRITICAL |
+| Closure rate falling for 2+ periods | HIGH |
+| Equipment cluster (3+ defects same system) | HIGH |
+| Class condition unresolved past deadline | CRITICAL |
+
+## Related skills
+
+- **defect-data-collector** — junior skill that gathers the defect register
+- **pms-analyzer** — paired maintenance review
+- **status-rollup** — fleet-wide aggregation

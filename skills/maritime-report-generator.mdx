@@ -1,0 +1,53 @@
+---
+title: "Maritime Report Generator"
+description: "Turns inspection photos and vessel data into polished, self-contained maritime HTML reports — VIR, Owner's Report, Incident Investigation, Dry Dock."
+---
+
+## What it does
+
+The **Maritime Report Generator** takes a folder of inspection photos plus structured vessel data and produces a finished HTML report. It runs the [Image Analysis](/skills/image-analysis) skill over the photos, maps each photo to the right section of the chosen report template, fills in vessel details, and outputs a single self-contained file ready to send.
+
+## Report types
+
+- **Vessel Inspection Report (VIR)** — TSI-format inspection covering hull, machinery, accommodation, safety
+- **Owner's Report** — owner-facing condition summary
+- **Incident Investigation Report** — root-cause analysis with timeline, evidence, and corrective actions
+- **Dry Dock Report** — pre/post dry-dock condition with work-list verification
+
+## When to use it
+
+- "Generate vessel inspection report"
+- "Create VIR"
+- "Owner's report for AQUILA"
+- "Incident investigation report"
+- "Dry dock report"
+- "Inspection report from these photos"
+
+## How it works
+
+1. **Identify report type and vessel data** — confirms the report template and gathers vessel details (name, IMO, dates, location).
+2. **Analyse photos** — calls the image-analysis skill in vessel mode to classify equipment, rate condition, detect defects.
+3. **Map photos to sections** — matches each analysed photo to the relevant report section (engine room, deck, cargo, accommodation, safety, etc.) based on equipment type.
+4. **Fill the template** — writes the report HTML with vessel data, photos, captions, condition summaries, and any flagged findings.
+5. **Present draft** — delivers a self-contained HTML file the user can review, iterate on, or send.
+
+## What you can control
+
+- Report type (VIR / Owner's / Incident / Dry Dock)
+- Vessel data (name, IMO, inspection date, location, attendees)
+- Inclusion of executive summary, defect list, recommendations
+- Photo selection and order within each section
+
+## Output
+
+A single HTML file with embedded photos and styling — works offline, sends as one attachment, no external assets.
+
+## Why it's an orchestration skill
+
+Generating a report is multi-step: photo analysis, classification, mapping, templating. Doing this skill-by-skill works but takes care to wire correctly. The generator handles the wiring so the user provides photos + a few details and gets a draft back.
+
+## Related skills
+
+- **image-analysis** — runs the per-photo equipment classification this skill consumes
+- **qhse-investigation-report** — specialised template for safety incidents
+- **pdf-to-markdown** — useful when input includes scanned reports

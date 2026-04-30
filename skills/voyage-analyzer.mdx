@@ -1,0 +1,93 @@
+---
+title: "Voyage Analyzer"
+description: "Reviews voyage performance against the Charter Party — speed, consumption, weather routing — and flags demurrage and CP-claim exposure."
+---
+
+## What it does
+
+The **Voyage Analyzer** reviews a vessel's current voyage against its Charter Party (CP) terms. It evaluates speed-vs-CP, consumption-vs-CP, weather-routing decisions, and ETA performance, then produces a senior review highlighting CP claims, demurrage exposure, and operational risks.
+
+It pairs with the [Voyage Data Collector](/skills/voyage-data-collector): one fetches, one interprets.
+
+## When to use it
+
+- "How is the voyage going?"
+- "CP status?"
+- "Voyage review"
+- "Speed vs Charter Party"
+- "Demurrage risk"
+
+## What it looks at
+
+- Speed averages by leg vs CP warranted speed (good-weather definition)
+- Consumption averages by fuel grade vs CP allowance
+- Weather conditions per leg vs CP "good weather" thresholds
+- ETA vs laycan windows
+- Slow-steaming and weather-routing decisions
+- Claim exposure (under-performance, over-consumption, off-spec)
+
+## How it works
+
+### 1. CP compliance at "good weather" definition
+
+CP terms specify a "good weather" envelope — sea state, wind, current — within which the warranted speed and consumption apply. The script first filters legs to good-weather conditions, then evaluates:
+
+$$
+\Delta V = V_\text{actual} - V_\text{CP}
+$$
+
+$$
+\Delta \text{FOC} = \text{FOC}_\text{actual} - \text{FOC}_\text{CP}
+$$
+
+Sustained negative speed or positive consumption deviation under good weather is a CP-claim risk.
+
+### 2. Weather-leg analysis
+
+In poor weather the CP terms don't apply, but the voyage decisions (route choice, speed reduction) still matter for owner exposure. The analyzer flags decisions that significantly extended sea time or boosted consumption when better routing was available.
+
+### 3. ETA tracking
+
+Projected ETA against laycan windows highlights port-call coordination needs and demurrage / despatch implications.
+
+### 4. Claim probability
+
+A composite combines performance deviation, weather coverage, and CP wording sensitivity:
+
+$$
+P_\text{claim} = w_1 \cdot \overline{|\Delta V|} + w_2 \cdot \overline{|\Delta \text{FOC}|} + w_3 \cdot (1 - C_\text{good-wx})
+$$
+
+Where $C_\text{good-wx}$ is the share of voyage time within the CP good-weather envelope. Higher mean deviations and lower good-weather coverage both raise claim likelihood.
+
+## What the review contains
+
+- Executive summary with voyage status and CP compliance verdict
+- Leg-by-leg performance table
+- Good-weather analysis (filtered legs only)
+- Speed and consumption deviations vs CP
+- Weather-routing assessment
+- ETA / laycan analysis
+- Recommendations (operational adjustment, owner communication)
+- Escalation decision
+
+## Escalation
+
+Escalates to the Commercial Operator and Technical Superintendent when:
+
+| Trigger | Severity |
+|---------|----------|
+| Speed deficit &gt;5% under good weather | HIGH |
+| Consumption excess &gt;5% under good weather | HIGH |
+| ETA threatens laycan | HIGH |
+| Sustained pattern across 3+ legs | CRITICAL |
+
+## Why CP-aware
+
+A voyage analysis without CP context misses the entire commercial dimension. Speed shortfall on a TC voyage vs voyage charter has different consequences; a 0.5-knot deficit may or may not be a claim depending on CP wording. Reading CP terms first keeps the review actually useful.
+
+## Related skills
+
+- **voyage-data-collector** — junior skill that gathers voyage telemetry
+- **fuel-oil-analyzer** — paired bunker review
+- **status-rollup** — fleet-wide aggregation

@@ -1,0 +1,62 @@
+---
+title: "Flag Circulars Sync"
+description: "Downloads and syncs the latest official circulars from flag-state authorities — Panama, Singapore, Hong Kong, Marshall Islands, Liberia, Malta, Bahamas."
+---
+
+## What it does
+
+The **Flag Circulars Sync** skill keeps the local document library current with official maritime circulars published by flag-state authorities. It checks each authority's website, identifies new circulars, downloads them, and registers them so they become searchable through the document-search skill.
+
+Each flag has a dedicated scraper. New flags can be added without changing config — they're auto-discovered.
+
+## Supported flags
+
+- Panama
+- Singapore (MPA)
+- Hong Kong
+- Marshall Islands
+- Liberia
+- Malta
+- Bahamas
+
+## When to use it
+
+- "Sync flag circulars"
+- "Download Panama circulars"
+- "Check for new maritime circulars"
+- "Update flag-state documents"
+- "Has Singapore published anything new?"
+
+## How it works
+
+### 1. Status check
+
+A status pass shows the current sync state across every flag — last run timestamp, total circulars downloaded, count of new circulars waiting on the website.
+
+### 2. Differential download
+
+The sync compares the authority's published index against the local registry and downloads **only what's new**. Existing circulars are not re-fetched.
+
+### 3. Registry update
+
+Every newly downloaded circular is registered with its number, title, issue date, and source URL so it can be found later via search.
+
+### 4. Notification
+
+When new circulars are downloaded, a summary email goes to the maritime team listing what was added.
+
+## What it produces
+
+- Newly downloaded circular PDFs in the document library
+- Registry entries linking each PDF to its metadata
+- A status report showing per-flag sync state and counts
+
+## Why it's split per flag
+
+Flag-state websites are inconsistent — some publish RSS, some require login, some change their URL structure quarterly. Splitting per flag keeps changes isolated: a Panama site update only requires touching the Panama scraper.
+
+## Related skills
+
+- **download-makers-circulars** — sister skill for equipment manufacturer service letters
+- **search-indexed-documents** — search across every downloaded circular
+- **pdf-to-markdown** — converts downloaded PDFs to searchable markdown

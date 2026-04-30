@@ -1,0 +1,175 @@
+---
+title: "Bootstrap scripts"
+description: "Two standalone scripts to seed history.json from an Excel export or generate a synthetic year of test data."
+---
+
+The `metaweave/history-tools/` folder ships two standalone scripts that build `history.json` files **without going through the email path**. Both are useful when you need to seed the History Viewer with data on day 1, or to generate test fixtures.
+
+## `excel_to_history.py`
+
+**Purpose:** Convert a vendor Excel of voyage reports → `history.json` in the Metaweave format.
+
+**Use case:** A vessel just signed up and you already have months of historical reports in an Excel export from a previous reporting tool. This script transforms those rows into Metaweave-shape submissions so the crew opens the History Viewer on day 1 and immediately sees their past voyages.
+
+### How it works
+
+1. **Read** the Excel file row by row (one row per report timestamp).
+2. **Pre-pass: Pair boundary events.** Spreadsheets log boundary events as separate rows:
+   - `BANCH` (begin anchor) ↔ `EANCH` (end anchor) → emits an `IDLE IN PORT` event
+   - `BDRIFT` (begin drift) ↔ `EDRIFT` (end drift) → emits a `DRIFTING` event
+   - Each pair is attached to the **next NOON** by Timestamp (UTC).
+3. **Pre-pass: Pair ARRI/DEPA → BOSP.** For each `BOSP` (Beginning of Sea Passage), find the most recent `ARRI` (arrival) and `DEPA` (departure) in the same voyage. Used to populate `berthingdetails` on the DEPARTURE record.
+4. **Per-row build.** For each timestamp:
+   - Build the 92-field scalar payload (location, position DMS, vessel condition, distance, speed, engine hours, draft, cargo, weather, lube oil, tanks, scrubber, FOWE, crew names)
+   - Build the bunker array (per fuel type, per engine breakdown — HSFO, LSMGO, VLSFO, VLSFO ≤80 cSt, plus optional biofuel)
+   - Attach events from the pre-pass (in-port NOONs only)
+   - Attach upcoming ports (destination + ETA) for at-sea NOONs
+   - Attach berthing details for DEPARTURE
+5. **Emit one of three records** per row:
+   - `NOON` — at-sea or in-port noon observation
+   - `ARRIVAL` — emitted when row type is `EOSP`, location forced to "At Sea"
+   - `DEPARTURE` — emitted when row type is `BOSP`, location forced to "At Sea"
+
+### Fuel tracking
+
+Per voyage, the script maintains a `prev_rob` dict so each row's `robstart` matches the previous row's `robend`. Each fuel row includes:
+
+- `robstart`, `robend`, `consumption`
+- viscosity, LCV, sulphur (carried forward unless overridden)
+- Per-engine breakdown: ME, AE (generator), Boiler
+
+### Run it
+
+```bash
+cd metaweave/history-tools
+python excel_to_history.py
+```
+
+Inputs are hardcoded at the top of the script — change the source path and vessel constants if you want to point it at a different Excel.
+
+```python
+EXCEL_PATH = "/path/to/vessel-voyage-reports.xlsx"
+VESSEL_NAME = "SAMPLE VESSEL"
+VESSEL_IMO = 9999999
+VESSEL_DWT = 110000
+FORM_VERSION = "mw-2026-04-14"
+OUTPUT_PATH = "../history-starter/sample-vessel-history.json"
+```
+
+Output:
+
+```text
+Wrote sample-vessel-history.json (3.0 MB)
+  Records: 453
+  NOON: 367
+  ARRIVAL: 43
+  DEPARTURE: 43
+```
+
+### When to use it
+
+- Vessel just signed up and you have months of historical Excel exports → seed the History Viewer
+- Re-baselining a vessel's archive after a data migration
+- Building test fixtures from real-shape data
+
+## `generate_metaweave_test_history.py`
+
+**Purpose:** Generate a synthetic 12-month Aframax history with realistic operational patterns.
+
+**Output:** `history-starter/METAWEAVE-TEST-history.json` — ~420 records, December 2024 → January 2026, sample vessel METAWEAVE TEST (IMO 9840157).
+
+### How it works
+
+The script runs a **state machine** through a hardcoded list of voyage phases, emitting reports as it advances time.
+
+### Phase types
+
+10 voyages (V31–V41) with 10 phases each:
+
+```python
+("V31", "BALLAST", "AEFJR", "SARTA"),                # Fujairah → Ras Tanura
+("V31", "LOAD",    "SARTA", 36),                     # Load 36h at Ras Tanura
+("V31", "LADEN",   "SARTA", "SGSIN"),                # Ras Tanura → Singapore
+("V31", "DISCHARGE","SGSIN", 30),                    # Discharge 30h
+("V31", "BUNKER",  "SGSIN", 12, {"VLSFO": 1200}),    # Bunker 12h, lift 1200t
+…
+```
+
+Phase types:
+
+- `LOAD(port, hours)` — at berth, loading
+- `DISCHARGE(port, hours)` — at berth, discharging
+- `BUNKER(port, hours, {fuel: tonnes, …})` — at berth or anchorage, lifting fuel
+- `BALLAST(from, to, [anchorage_hours])` — sea leg, no cargo
+- `LADEN(from, to, [anchorage_hours])` — sea leg, with cargo
+
+### Consumption profiles
+
+Each phase applies a daily fuel rate (tonnes/day):
+
+| Phase | ME | AE | Boiler |
+|---|---|---|---|
+| At sea, laden | 49.0 | 2.6 | 1.0 |
+| At sea, ballast | 42.0 | 2.6 | 0.8 |
+| In port, load | 0.3 | 4.5 | 1.5 (IGS ops) |
+| In port, discharge | 0.4 | 5.0 | 3.0 (cargo heating) |
+| In port, bunker | 0.0 | 4.0 | 1.5 |
+| In port, idle | 0.0 | 3.5 | 1.0 |
+
+### Initial state
+
+ROB starts at: VLSFO 2200t, LSMGO 600t, lube ME crankcase 18k L, AE 12k L, cyl high-TBN 9k L, fresh water 220 m³, bilge 12 m³, sludge 8 m³.
+
+Cumulative counters: ME hours 12k, AE hours 35k, AB hours 8k, ME revs 1.5B.
+
+### Trade pattern
+
+- **Loading:** Ras Tanura (SARTA), Mina al Ahmadi (KWMAA)
+- **Discharging:** Singapore, Yokohama, Mizushima, Daesan, Ulsan, Tianjin, Rotterdam, Marseille, Trieste
+- **Bunker ports:** Singapore, Algeciras, Fujairah
+- **Bio fuel blend voyages:** V36, V39, V40
+
+### What it emits
+
+For each voyage:
+
+- **NOON** at every local noon during each phase (sea noons aligned to GMT 12:00)
+- **ARRIVAL** at each EOSP (end of sea leg)
+- **DEPARTURE** at each COSP (start of sea leg)
+- In-port NOONs include nested events (LOADING, DISCHARGING, BUNKER, IDLE) with per-fuel breakdown
+
+### Run it
+
+```bash
+cd metaweave/history-tools
+python generate_metaweave_test_history.py
+```
+
+Output:
+
+```text
+Generated 420 records.
+  ARRIVAL:   27
+  DEPARTURE: 28
+  NOON:      365
+  Wrote METAWEAVE-TEST-history.json (2.9 MB)
+```
+
+### When to use it
+
+- **Testing** the History Viewer with realistic data
+- **Demoing** the platform without exposing real fleet data
+- **Stress-testing** the pipeline (replay through `--file` on each record)
+- **Documentation screenshots** — fields populated, events varied, every report type represented
+
+## Notes
+
+- Both scripts are standalone — they have no imports from the pipeline package.
+- Both scripts produce files that follow the same schema described in [Data format](/history/data-format).
+- Neither script writes to PostgreSQL. They produce `history.json` only — for the History Viewer or as test fixtures.
+- To get the same data into PostgreSQL, you'd need to wrap each record back into an email body and pass it through the pipeline (or write a small adapter that calls the mapper directly on the JSON).
+
+## See also
+
+- [Setting up history.json](/history/setup) — how the form writes to the file at runtime
+- [Data format](/history/data-format) — the JSON schema both scripts produce

@@ -1,0 +1,40 @@
+/* Apply SF Pro across the site, fallback to system font stack */
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+}
+
+html,
+body,
+button,
+input,
+select,
+textarea,
+.font-sans {
+  font-family: var(--font-sans) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code,
+pre,
+kbd,
+samp,
+.font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+/* ─── Hide the right-side "On this page" TOC entirely ─── */
+/* Frees the right-side gutter so main content gets the full width.
+   Targets multiple Mintlify versions / DOM patterns. */
+aside[aria-label*="table of contents" i],
+aside[aria-label*="on this page" i],
+nav[aria-label*="table of contents" i],
+nav[aria-label*="on this page" i],
+[class*="TableOfContents"],
+[class*="toc-sidebar"],
+[id*="table-of-contents"],
+#table-of-contents {
+  display: none !important;
+}
