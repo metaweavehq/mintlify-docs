@@ -1,0 +1,158 @@
+---
+title: "Data model"
+description: "17 SQLAlchemy tables, hierarchy, unique constraints, CASCADE behaviour."
+---
+
+The pipeline writes to **17 PostgreSQL tables**, all prefixed `metaweave_*`.
+
+## Hierarchy
+
+```text
+Vessel  (reference, by imo_number)
+  │
+  ├── Voyage  (unique on vessel_id + voyage_number)
+  │     │
+  │     └── Report  (unique on vessel_id + report_type + report_datetime_utc)
+  │           │
+  │           ├── ReportEvent (cascade)
+  │           │     └── EventFuelConsumption (cascade)
+  │           │
+  │           ├── ReportBunkerRob (cascade)
+  │           ├── ReportUpcomingPort (cascade)
+  │           ├── ReportFowePeriod (cascade)
+  │           ├── ReportScrubberBreakdown (cascade)
+  │           ├── BunkerDelivery (cascade)
+  │           ├── BunkerBiofuel (cascade)
+  │           ├── SofActivity (cascade)
+  │           ├── ReportCargo (cascade)
+  │           ├── MonthEndBunkerReport (cascade)
+  │           ├── BerthingDetails (cascade)
+  │           └── ReportDelay (cascade)
+  │
+  └── (no direct children)
+
+FuelType  (reference, standalone lookup table)
+```
+
+`ondelete="CASCADE"` on every child FK means deleting a `Report` (e.g. when overwriting it with a corrected submission) wipes all its dependents in a single statement.
+
+## The 17 tables
+
+| Table | Purpose | Key constraint |
+|---|---|---|
+| `metaweave_vessel` | Reference: one row per vessel | `imo_number` unique |
+| `metaweave_fuel_type` | Reference: fuel grades + properties | (lookup) |
+| `metaweave_voyage` | One row per voyage per vessel | `(vessel_id, voyage_number)` unique |
+| `metaweave_report` | One row per submission | `(vessel_id, report_type, report_datetime_utc)` unique |
+| `metaweave_report_event` | At-sea or in-port events | FK `report_id` CASCADE |
+| `metaweave_event_fuel_consumption` | Per-fuel breakdown for each event | FK `event_id` CASCADE |
+| `metaweave_report_bunker_rob` | Report-level fuel ROB summary | FK `report_id` CASCADE |
+| `metaweave_report_upcoming_port` | Next ports + ETA (Departure) | FK `report_id` CASCADE |
+| `metaweave_report_fowe_period` | Fuel Oil Water Emulsion periods | FK `report_id` CASCADE |
+| `metaweave_report_scrubber_breakdown` | Scrubber breakdown periods | FK `report_id` CASCADE |
+| `metaweave_bunker_delivery` | BDN rows from Bunker Reports | FK `report_id` CASCADE |
+| `metaweave_bunker_biofuel` | Biofuel feedstock + sustainability tags | FK `report_id` CASCADE |
+| `metaweave_sof_activity` | Port activity rows from SOF | FK `report_id` CASCADE |
+| `metaweave_report_cargo` | Cargo details (B/L numbers, ship/shore figures) | FK `report_id` CASCADE |
+| `metaweave_month_end_bunker_report` | Month-end bunker reconciliation | FK `report_id` CASCADE |
+| `metaweave_berthing_details` | Terminal, first line ashore, all-fast, etc. | FK `report_id` CASCADE |
+| `metaweave_report_delay` | Delay/off-hire periods | FK `report_id` CASCADE |
+
+## The Report table
+
+The `metaweave_report` table is the spine. **92 scalar columns** plus an audit JSON. Grouped:
+
+### Identity & metadata
+`report_id` (PK), `voyage_id` (FK), `vessel_id` (FK), `report_type` (NOON/ARRIVAL/DEPARTURE/BUNKER/SOF), `form_version`, `source_system` (always `"MW"`), `report_datetime_utc`, `location`
+
+### Position
+`latitude_decimal`, `longitude_decimal`, `latitude_raw`, `longitude_raw` (raw DMS preserved alongside the parsed decimal)
+
+### Voyage context
+`port`, `port_etd`, `vessel_condition` (`Laden`/`Ballast`), `within_ice_edge`, `refuge_port_call`, `sts_operation`, `water_type`
+
+### Performance
+`cp_speed`, `observed_distance`, `engine_distance`, `speed_log_distance`, `slip_pct`, `main_engine_hrs`, `steaming_hours`, `reported_speed`, `main_engine_revs`, `average_rpm`, `average_kw`, `me_output`
+
+### Generators (× 4) + Auxiliary
+Hours and KWhrs per generator, plus `fw_generator_hours`, `aux_boiler_hours`, `incinerator_hours`
+
+### Draft, cargo, weather
+`fwd_draft`, `aft_draft`, `mean_draft`, `dwt`, `displacement`, `avg_cargo_temp`, plus 11 weather fields (wind, sea, swell, temperature, pressure)
+
+### Main engine technical
+`me_torque`, `me_tcr_rpm`, four air-cooler temps/water flows, `pressure_drop_after_ac`, `scavenge_air_pressure`, EGB exhaust temps in/out, `fuel_temp_at_flowmeter`
+
+### Lub oil ROBs
+`stern_tube_lub_lost`, ROBs for high-TBN cyl oil, low-TBN cyl oil, ME crankcase oil, A/E lub oil
+
+### Tank ROBs & Slops
+Bilge water (cubm + % max), sludge (cubm + % max), slops (rob/water/oil), freshwater (rob/consumed/received), `daily_fw_production`
+
+### Scrubber, FOWE
+`scrubber_in_operation`, `scrubber_mode`, `fowe_installed`, `fowe_used`
+
+### ECA consumption (HSFO triplets)
+`total_consumption_hsfo`, `eca_consumption_hsfo`, `non_eca_consumption_hsfo`
+
+### Bunker-specific (only populated for Bunker reports)
+`barge_name`, `barge_alongside`, `bunker_hose_connected`, `bunker_hose_disconnected`, `commenced_bunkering`, `bunkering_completed`, `barge_cast_off`
+
+### Crew
+`master_first_name`, `master_last_name`
+
+### Audit
+`email_message_id` (Outlook ID for traceback), `raw_json` (full decrypted payload — JSON column), `received_at` (UTC timestamp of ingest)
+
+## Why save `raw_json`
+
+Every report row stores the **entire decrypted payload as JSON**. That gives you:
+
+- **Reproducibility** — the mapper can be re-run on stored JSON without re-fetching email
+- **Field rescue** — if a new field is added later, historical rows still have the data; you just need a backfill script
+- **Audit** — exactly what the form sent, byte-for-byte after decryption
+
+Trade-off: ~5–20 KB per row. For typical fleets (1–100 vessels × 365 days) this is negligible.
+
+## Reference vs. transactional
+
+| Reference (rarely changes) | Transactional (every submission) |
+|---|---|
+| `metaweave_vessel` | `metaweave_report` |
+| `metaweave_fuel_type` | `metaweave_report_event` and the 12 other child tables |
+
+Reference tables are upserted; transactional tables are delete-then-insert per Report. The Voyage table is a hybrid — created once per voyage, referenced from many Reports.
+
+## Querying examples
+
+```sql
+-- Latest noon for each vessel
+SELECT DISTINCT ON (vessel_id) *
+FROM metaweave_report
+WHERE report_type = 'NOON'
+ORDER BY vessel_id, report_datetime_utc DESC;
+
+-- Total fuel consumed per voyage
+SELECT v.voyage_number,
+       SUM(efc.total_consumption) AS total_fuel
+FROM metaweave_voyage v
+JOIN metaweave_report r ON r.voyage_id = v.voyage_id
+JOIN metaweave_report_event e ON e.report_id = r.report_id
+JOIN metaweave_event_fuel_consumption efc ON efc.event_id = e.event_id
+WHERE v.vessel_id = $1
+GROUP BY v.voyage_number;
+
+-- Get the raw payload for one report
+SELECT raw_json
+FROM metaweave_report
+WHERE report_id = $1;
+```
+
+## Schema migrations
+
+The pipeline includes Alembic but doesn't use it yet. The current schema is created by `Base.metadata.create_all()`. For production, switch to Alembic when the schema starts evolving — `alembic init` is already supported by the deps.
+
+## See also
+
+- [ETL stages → Writer](/pipeline/etl-stages) — how upserts are sequenced
+- [Bootstrap scripts](/history/bootstrap-scripts) — backfill `history.json` from Excel or synthetic data

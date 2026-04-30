@@ -1,0 +1,49 @@
+---
+title: "Outlook Email Sync"
+description: "Syncs an Outlook inbox into local storage and a searchable database — emails, attachments, threads, all available offline."
+---
+
+## What it does
+
+The **Outlook Email Sync** skill pulls every email from a configured Outlook inbox into local storage and a searchable database. Each message and its attachments land on disk; a SQLite index makes the corpus instantly searchable; threads are reconstructed automatically.
+
+Once synced, agents can search, classify, and reply to emails without round-tripping to Outlook every time.
+
+## When to use it
+
+- "Sync emails"
+- "Fetch new emails"
+- "Get the latest inbox"
+- "Populate threads"
+- "Set up the email pipeline"
+
+## What it does on each run
+
+1. Authenticates with Microsoft Graph using the existing token cache.
+2. Fetches new messages since the last sync.
+3. Downloads attachments alongside each email.
+4. Indexes everything in SQLite — sender, recipients, subject, body, dates, attachments.
+5. Rebuilds threads so reply chains are linked together.
+6. Marks processed emails so the next sync only touches new mail.
+
+## What it captures
+
+- Full message body (HTML and text)
+- Subject, sender, recipients (To, CC, BCC), dates
+- Attachments downloaded to disk
+- Thread / conversation linkage
+- Folder and category labels
+
+## Why a local database
+
+Searching Outlook over Graph for every query is slow and rate-limited. A local indexed copy means:
+
+- Sub-second search across the entire inbox
+- Offline analysis (classification, summarisation, entity extraction)
+- Audit trail of what was processed and when
+- Clean inputs for downstream skills (case extraction, vendor invoice processing, sentiment monitoring)
+
+## Related skills
+
+- **search-indexed-documents** — search engine that runs over the indexed email corpus
+- **maritime-report-generator** — consumes incident emails when generating investigation reports

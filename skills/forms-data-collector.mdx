@@ -1,0 +1,41 @@
+---
+title: "Forms Data Collector"
+description: "Junior skill that fetches mandatory form / submission status for a vessel and files it as evidence."
+---
+
+## What it does
+
+The **Forms Data Collector** pulls a vessel's mandatory form roster — drills, inspections, reports, checklists — with each form's due date, last submission date, and status, and files a timestamped snapshot. It pairs with the [Forms Analyzer](/skills/forms-analyzer): one fetches, one interprets.
+
+## When to use it
+
+- "Form scan"
+- "Check forms for AQUILA"
+- "Pull submission status"
+- "Forms collect"
+
+## What it captures
+
+- Every mandatory form for the vessel with: form name, frequency, due date, last submitted date, status, owning rank
+- Recent submissions including submitted-by and timestamp
+- Late-submission flags as reported by source
+
+## How it works
+
+1. Looks up the vessel by IMO.
+2. Pulls the form / submission roster from the configured source.
+3. Writes a timestamped evidence record under the vessel's forms case folder.
+4. Updates the case so any reviewing agent can see new evidence is available.
+
+## What it produces
+
+- Structured form data consumed by the analyzer
+- Plain-English summary covering total mandatory, submitted on time, overdue count
+- Filing metadata (timestamp, source, sequence number)
+
+Every collection is append-only — historical submission record is preserved.
+
+## Related skills
+
+- **forms-analyzer** — senior skill that turns this snapshot into a compliance review
+- **status-rollup** — fleet-wide aggregation

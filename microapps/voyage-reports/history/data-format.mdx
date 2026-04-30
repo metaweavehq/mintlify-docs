@@ -1,0 +1,123 @@
+---
+title: "history.json data format"
+description: "The JSON schema each row follows, and what's inside the payload for each report type."
+---
+
+`history.json` is a **JSON array** of submission records. Every record shares the same 10 top-level fields. The variable part is the `payload` object, which differs by report type.
+
+## Top-level shape
+
+```json
+[
+  {
+    "id": "9840157|NOON|2026-04-13T12:00:00+00:00",
+    "formVersion": "mw-2026-04-14",
+    "reportType": "NOON",
+    "reportDatetimeUtc": "2026-04-13T12:00:00+00:00",
+    "submittedAt": "2026-04-13T12:30:00Z",
+    "submittedBy": "Master",
+    "vesselImo": 9840157,
+    "vesselName": "METAWEAVE TEST",
+    "voyageNo": "V31",
+    "payload": { /* report-specific */ }
+  },
+  …
+]
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | Stable upsert key: `{IMO}|{reportType}|{reportDatetimeUtc}` |
+| `formVersion` | string | Form template version, e.g. `mw-2026-04-14` |
+| `reportType` | string | One of `NOON`, `ARRIVAL`, `DEPARTURE`, `BUNKER`, `SOF`, `MONTH_END_BUNKER` |
+| `reportDatetimeUtc` | string | ISO 8601 with offset (the report's local time + timezone, **not** converted to UTC) |
+| `submittedAt` | string | ISO 8601 UTC (`Z`-suffixed) — when the form was archived |
+| `submittedBy` | string | Free-text, typically `Master` or the Master's name |
+| `vesselImo` | number | IMO number |
+| `vesselName` | string | Vessel name |
+| `voyageNo` | string | Voyage number (`V31`, `33L`, `33-1`, etc.) |
+| `payload` | object | Report-specific fields (see below) |
+
+## Payload by report type
+
+The payload object holds the actual report data. Field naming is **lowercase, single-word** (e.g. `mainenginehrs`, `robaeluboilltr`) — no spaces, no dashes, no camelCase.
+
+### NOON — ~80 fields
+
+The largest payload. Fields fall into these groups:
+
+- **Engine** — `mainenginehrs`, `mainenginekwhrs`, `mainenginerevs`, `averagerpm`, `averagekw`, `meoutput`
+- **Generators** — `generatorone`/`two`/`three`/`four` (hours + KWhrs)
+- **Auxiliary** — `auxboilerhours`, `incineratorhours`, `fwgeneratorhours`
+- **Distance & speed** — `observeddistancesincelastreport`, `enginedistance`, `distbyspeedlognm`, `slip`, `reportedspeed`, `cpspeed`, `steaminghrs`
+- **Position & port** — `latitude`, `longitude`, `port`, `portetd`, `withiniceedge`, `refugeportcall`, `stsoperation`
+- **Vessel state** — `vesselcondition` (`Ballast`/`Laden`), `fwddraft`, `aftdraft`, `meandraft`, `dwt`, `displacement`
+- **Weather** — `airtemp`, `seatemp`, `barpressure`, `mainwindforce`, `mainwinddir`, `mainseastate`, `seaheight`, `seadirection`, `swellheight`, `swelldirection`
+- **Lub oil ROBs** — `robhightbncylinderoilltr`, `roblowtbncylinderoilltr`, `robmecrankcaseoilltr`, `robaeluboilltr`, `sterntubelublosttosealtr`
+- **Tank ROBs** — `totalbilgewatertankrobcubm`, `totalsludgetankrobcubm`, `slopsrob`, `slopswater`, `slopsoil`, `freshwaterrob`, `freshwaterconsumed`, `freshwaterreceived`
+- **Scrubber & FOWE** — `scrubberinoperation`, `currentmodeofscrubber`, `foweavailability`, `foweusage`
+- **Events** — nested arrays `atseaeventrobdetails` (At Sea) or `inporteventrobdetails` (In Port)
+- **Bunker ROB** — nested arrays `atseabunkerrobdetails` or `inportbunkerrobdetails`
+- **Hidden identity** — `imo`, `vesselName`, `vesselCode`, `formIdentifier`, `refId`, `principalId`, `clientIds`, `clientName`, `isBarge`
+
+### ARRIVAL — ~85 fields
+
+Same shape as NOON, with arrival-specific extras:
+
+- `heading`, `egbexhgastempin`, `egbexhgastempoutdegc`, `dropafteraircooler`, `meaircoolerairtempindegc`
+- `fueltempatflowmeter`, `currentmodeofscrubber`
+- Always `location: "At Sea"` (EOSP, not yet in port)
+
+### DEPARTURE — ~75 fields
+
+Same shape as ARRIVAL, plus:
+
+- `berthingdetails` — nested object with terminal name, first-line-ashore time, all-fast time, clear-berth time, tugs
+
+Always `location: "At Sea"` (COSP, leaving the port).
+
+### BUNKER — ~27 fields
+
+Significantly smaller. Bunkering-focused:
+
+- **Operation** — `Supplier`, `commencedbunkering`, `bunkerhoseconnected`, `bunkerhosedisconnected`, `bunkeringcompleted`
+- **Barge** — `bargename`, `bargealongside`, `bargecasteoff`
+- **Fuel data** — `gsfueltypeandquantity` (BDN array), `bdnbiofuel` (biofuel blend array)
+- **Admin** — `reporttime`, `reportName`, `mainremarks`, `version`
+- **Personnel** — `firstname`, `lastname`, `principalId`, `clientIds`, `clientName`
+- **Vessel** — `imo`, `vesselName`, `vesselCode`, `voyagenumber`, `isBarge`
+
+### SOF — variable
+
+Port activity log. Notable arrays:
+
+- `portactivityrows` — activity rows (anchor, pilot on board, NOR tendered, all fast, etc.) with timestamps
+- `cargodetails` — cargo rows with B/L numbers, ship/shore figures
+- Standard vessel/voyage scalars
+
+## Three sample files
+
+The `history-starter/` folder ships three example files:
+
+| File | Records | Vessel | Date range | Notes |
+|---|---|---|---|---|
+| `history.json` | 8 | METAWEAVE TEST (IMO 9840157) | 2026-04-01 to 2026-04-14 | Curated 2-week sample with all types including BUNKER |
+| `METAWEAVE-TEST-history.json` | 420 | METAWEAVE TEST | 2024-12-31 to 2026-01-01 | Full year, synthetic via `generate_metaweave_test_history.py` |
+| `Sample-Vessel-history.json` | 453 | SAMPLE VESSEL (Aframax tanker) | 2024-12-31 to 2026-01-01 | Full year, derived from a vendor Excel via `excel_to_history.py` |
+
+All three share the **identical top-level schema**. They differ only in volume and content.
+
+## Conventions
+
+- **Lowercase field names** — `mainenginehrs`, not `mainEngineHrs`
+- **Strings for everything user-typed**, including numerics that came from text inputs (the pipeline coerces with `safe_decimal()` / `safe_int()`)
+- **Yes/No flags as strings** — `"Yes"` / `"No"` (the pipeline normalises with `parse_bool()`)
+- **DMS lat/long as strings** — `"6 1' 54\" N"` (the pipeline converts to decimal degrees)
+- **Datetimes preserved with their offset** — not normalised to UTC, so timezone context isn't lost
+- **Nested arrays** for events, bunker rows, BDN rows, port activities, cargo details, upcoming ports
+
+## See also
+
+- [Setting up history.json](/history/setup) — how the file is created and updated
+- [Mapper](/pipeline/etl-stages) — how the pipeline maps these payload fields to PostgreSQL columns
+- [Bootstrap scripts](/history/bootstrap-scripts) — `excel_to_history.py` and `generate_metaweave_test_history.py` produce files of this shape

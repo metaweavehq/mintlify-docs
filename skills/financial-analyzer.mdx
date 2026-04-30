@@ -1,0 +1,89 @@
+---
+title: "Financial Analyzer"
+description: "Reviews vessel budget vs actual, investigates variances, identifies cost drivers, and projects year-end position."
+---
+
+## What it does
+
+The **Financial Analyzer** turns raw vessel spend data into a senior budget review. It evaluates budget-vs-actual variance, isolates cost drivers, projects year-end position, and escalates significant overspend to the Technical Superintendent.
+
+It pairs with the [Financial Data Collector](/skills/financial-data-collector): one fetches, one interprets.
+
+## When to use it
+
+- "Budget OK?"
+- "Overspend?"
+- "How are we doing on costs?"
+- "Financial review"
+- "Year-end projection"
+
+## What it looks at
+
+- Budget allocation by category (technical, crew, lube, victualling, port disbursements, repairs)
+- Year-to-date actual spend by category
+- Variance per category, both absolute and percentage
+- Trend across recent periods (accelerating vs flattening)
+- Specific large or unusual transactions
+- Year-end forecast based on burn rate
+
+## How it works
+
+### 1. Budget-vs-actual variance
+
+For every cost category the analyzer computes:
+
+$$
+\text{Variance \%} = \frac{\text{Actual} - \text{Budget}}{\text{Budget}} \times 100
+$$
+
+A category is flagged when variance exceeds the configured threshold (typically 10%).
+
+### 2. Cost-driver identification
+
+Within an over-budget category, the script ranks transactions and vendor concentrations to identify what is actually driving the variance — bulk repair, single high-value PO, sustained burn-rate, or freight cost.
+
+### 3. Year-end projection
+
+Burn-rate projection extrapolates current spend to year-end:
+
+$$
+\text{Forecast}_\text{YE} = \text{Actual}_\text{YTD} + \text{BurnRate} \times \text{MonthsRemaining}
+$$
+
+A forecast that breaches budget by more than the threshold triggers escalation.
+
+### 4. Trend tier
+
+Categories are classified as:
+
+- **Improving** — variance narrowing period-on-period
+- **Stable** — variance flat
+- **Deteriorating** — variance widening (escalation candidate)
+
+## What the review contains
+
+- Executive summary with overall budget status
+- Variance table by category with flags
+- Top cost drivers per over-budget category
+- Trend per category (improving / stable / deteriorating)
+- Year-end forecast with confidence range
+- Recommendations (re-forecast, cost-control, vendor renegotiation)
+- Escalation decision
+
+## Escalation
+
+Escalates to the Technical Superintendent when:
+
+| Trigger | Severity |
+|---------|----------|
+| Year-end forecast breach &gt;10% | HIGH |
+| Year-end forecast breach &gt;25% | CRITICAL |
+| Single category overspend &gt;25% | HIGH |
+| Deteriorating trend across 3+ categories | HIGH |
+| Unbudgeted spend on safety-critical items | CRITICAL |
+
+## Related skills
+
+- **financial-data-collector** — junior skill that gathers spend data
+- **purchase-analyzer** — paired procurement review
+- **status-rollup** — fleet-wide aggregation

@@ -1,0 +1,60 @@
+---
+title: "Vessel Intelligence"
+description: "Queries and writes vessel intelligence — observations, notes, learnings, cases, and evidence — across vessel and fleet."
+---
+
+## What it does
+
+The **Vessel Intelligence** skill is the read/write interface to the structured knowledge base behind every vessel: cases, evidence, observations, agent notes, and learnings. It lets agents and humans query "what do we know about X?" and log new findings without touching raw files.
+
+The intelligence layer keeps three distinct types of records, each with its own lifecycle:
+
+| Layer | What it captures | Who writes it |
+|-------|------------------|---------------|
+| **Observations** | Factual statements about a case ("seawater leak damaged motor windings") | Any agent |
+| **Notes** | Opinions, recommendations, flags ("similar risk on sister ships") | Any agent or human |
+| **Learnings** | What the fleet should change ("install leak detection near motors") | Senior agents |
+
+Every record links to evidence — case folders, files, emails — so reasoning can always be traced back to source.
+
+## When to use it
+
+- "What do we know about this case?"
+- "Log this finding"
+- "Search vessel observations"
+- "Write a learning"
+- "Get all intelligence for AQUILA"
+
+## What you can query
+
+- Every case for a vessel with status, priority, and recent activity
+- All observations for a case
+- All notes targeted at a vessel, case, or piece of equipment
+- All learnings derived from a case, vessel, or equipment family
+- Cross-vessel patterns when a learning has been promoted fleet-wide
+
+## What you can write
+
+- A new observation linked to a case (factual, with evidence)
+- A note on a case, vessel, or equipment (opinion, with reasoning)
+- A learning derived from a case (recommendation, optionally promoted fleet-wide)
+
+## How it works
+
+The skill operates against a per-vessel intelligence database plus a fleet-wide database. Reads and writes go through a query runner — there is no need to write SQL by hand. Every write captures the author, timestamp, evidence references, and the case lineage.
+
+## Why three layers
+
+Mixing facts, opinions, and recommendations in one bucket destroys their usefulness. Splitting them lets the system answer different questions cleanly:
+
+- "What happened?" — observations
+- "What does the team think about this?" — notes
+- "What should we do differently?" — learnings
+
+Promoting a learning fleet-wide is the moment a single-vessel finding becomes a fleet improvement.
+
+## Related skills
+
+- **search-vessel-cases** *(now removed from docs)* — historical case search
+- **search-learnings** *(now removed from docs)* — fleet learning search
+- **status-rollup** — fleet-wide aggregation that consumes intelligence records

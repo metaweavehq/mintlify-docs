@@ -1,0 +1,60 @@
+---
+title: "Image Analysis"
+description: "AI-vision analysis for any image — describes content in general mode, or assesses equipment condition and renames vessel inspection photos in maritime mode."
+---
+
+## What it does
+
+The **Image Analysis** skill runs AI vision over any image — a single photo, a folder, or a vessel inspection set — and produces a structured assessment. It auto-detects whether the image is maritime (equipment, machinery, vessel surfaces) and switches between two modes:
+
+- **General mode** — describes subject, objects, context, and any visible text
+- **Vessel mode** — assesses equipment condition, detects defects, classifies severity, renames photos to descriptive filenames, and writes a searchable index
+
+## When to use it
+
+- "Analyze this image"
+- "What is this?"
+- "Describe photo"
+- "Process vessel photos"
+- "Analyze the inspection batch"
+- "What equipment is in this photo?"
+
+## Modes
+
+### General mode
+
+For ad-hoc images. Returns a plain-language description: subject, key objects, environment, any readable text, useful context. Good for screenshots, document captures, quick "what am I looking at?" checks.
+
+### Vessel mode
+
+For inspection photo sets. The skill:
+
+1. Classifies the equipment shown (engine room, deck, accommodation, cargo system, etc.)
+2. Rates equipment condition on a 5-point scale: **good / fair / poor / damaged / critical**
+3. Identifies visible defects with location and likely cause
+4. Suggests a descriptive filename so photos become self-explanatory in the file system
+5. Writes a structured index entry covering equipment, condition, defects, and metadata
+
+The result is a fully audited inspection set — a TSI can scan the index, sort by condition, and jump straight to anything flagged poor or worse.
+
+## How it works
+
+The skill calls a unified vision engine (Gemini or OpenRouter, depending on configuration) with mode-specific prompts and configuration. Maritime detection runs first; if maritime content is present, vessel mode kicks in automatically.
+
+For large batches, the user is asked first which file action to take — rename in place, create renamed copies, or analyze without changing files.
+
+## What it produces
+
+| Mode | Output |
+|------|--------|
+| General | Plain-language description per image |
+| Vessel | Per-image equipment classification, condition rating, defect list, suggested filename, JSONL index of the whole batch |
+
+## Why it's split into two modes
+
+Generic image-description prompts produce vague results on engineering photos; condition-rating prompts produce nonsense on screenshots. Detecting the domain first, then routing to the right prompt, gets useful output for both cases without forcing the user to specify mode.
+
+## Related skills
+
+- **pdf-vision-extractor** — paired skill for diagrams and tables inside PDFs
+- **image-generator** — counterpart for generating images instead of analysing them

@@ -1,0 +1,51 @@
+---
+title: "Image Generator"
+description: "Generates AI images from text prompts — Nano Banana for fast iteration, Nano Banana Pro for professional quality with strong text rendering."
+---
+
+## What it does
+
+The **Image Generator** turns a text description into an image using AI image-generation models. It handles model selection, aspect ratio, resolution, and edit-an-existing-image flows in one consistent interface.
+
+## When to use it
+
+- "Generate image"
+- "Create a picture of…"
+- "Make me an image"
+- "Draw …"
+- "Generate artwork"
+
+## Models
+
+| Model | When to use |
+|-------|-------------|
+| **Nano Banana** | Fast iteration, exploration, drafts |
+| **Nano Banana Pro** | Production-ready output, professional quality, strong text rendering inside the image (signage, labels, posters) |
+
+The skill prompts for model choice when the use case is ambiguous; for explicit "make a poster with this headline" requests it defaults to Pro because text rendering matters.
+
+## What you can control
+
+- **Prompt** — the description of the image
+- **Model** — fast vs professional
+- **Aspect ratio** — square, landscape, portrait, custom
+- **Resolution** — standard or higher
+- **Reference image** — optional, for edit-an-existing or style-transfer flows
+
+## How it works
+
+1. Captures the user's description.
+2. Asks model and parameter preferences when they aren't obvious from the request.
+3. Calls the image generation engine with the right configuration.
+4. Returns the generated image and the parameters used (so iterations are reproducible).
+
+For edits (e.g. "the same image but change the background"), it accepts the original image as a reference input.
+
+## What it produces
+
+- The generated image in the requested aspect ratio and resolution
+- The exact prompt and parameters used (so the generation can be re-run or refined)
+
+## Related skills
+
+- **image-analysis** — counterpart for analysing images instead of generating them

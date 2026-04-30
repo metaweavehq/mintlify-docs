@@ -1,0 +1,71 @@
+---
+title: "Search Indexed Documents"
+description: "Searches across the maritime document library — IMPA codes, flag circulars, makers circulars, IMO publications, SMS, ship manuals — with exact-quote evidence."
+---
+
+## What it does
+
+The **Search Indexed Documents** skill searches every document collection in the maritime library and returns answers with exact source quotes, page numbers, and clickable PDF references. It is the right skill any time someone asks "what does X say about…" or needs to back a decision with regulatory or procedural evidence.
+
+## What it searches
+
+Indexed collections include (and grow as new sources are added):
+
+- **IMPA Marine Stores Guide** — spare-part codes
+- **Flag circulars** — Singapore (MPA), Panama, Hong Kong, Marshall Islands, Liberia, Malta, Bahamas
+- **Makers circulars** — MAN B&amp;W, Framo, Yanmar, others
+- **IMO publications** — SOLAS, MARPOL, MLC
+- **SMS manuals** — company safety management system
+- **Ship manuals** — vessel-specific operating manuals
+
+## When to use it
+
+- "What does X say about…"
+- "Check the circulars for…"
+- "Find the procedure for…"
+- "IMPA code for…"
+- "Singapore flag incident reporting"
+- "Where is the dry-dock procedure?"
+
+## How it works
+
+### 1. Discovery
+
+The skill finds every searchable collection by locating its keyword index — collections are added without code changes.
+
+### 2. Search-term expansion
+
+The user's query is expanded to improve recall:
+
+- Singular / plural variants
+- Maritime abbreviations (PPE, ISM, SOLAS, MLC, UKC, MPA)
+- Related concepts (fire / firefighting / extinguisher)
+- Flag-specific terms
+
+### 3. Multi-collection search
+
+Every relevant collection is searched, not just the most obvious one. A "main engine overhaul" question hits ship manuals, makers circulars, and SMS at once.
+
+### 4. Evidence assembly
+
+Top matches are read in detail; exact quotes are extracted with page numbers and PDF links. Nothing is paraphrased.
+
+## Output format
+
+Every answer includes:
+
+- **Direct answer** in 1–2 sentences
+- **Evidence sources** — for each, the document title, section, page, exact quote, and a clickable PDF viewer URL
+- **Multiple sources** when more than one collection is relevant
+
+The skill never paraphrases — it always shows the source text so the user can verify.
+
+## Why evidence-first
+
+Maritime decisions touch class, flag, charterer, and audit trail. An answer without a verifiable source is unusable in those contexts. Pairing each answer with quote + page + PDF link makes the response something a TSI or Marine Superintendent can paste directly into an email or report.
+
+## Related skills
+
+- **pdf-to-markdown** — converts PDFs into the searchable markdown this skill consumes
+- **download-flag-circulars**, **download-makers-circulars** — keep the corpus current
+- **vessel-intelligence** — search vessel-specific cases and learnings rather than published documents

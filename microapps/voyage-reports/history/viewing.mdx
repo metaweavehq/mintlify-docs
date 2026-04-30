@@ -1,0 +1,105 @@
+---
+title: "Viewing past reports"
+description: "The click path from opening the viewer to exporting filtered submissions to Excel."
+---
+
+This page covers the day-to-day usage of the History Viewer. For one-time setup, see [Setting up history.json](/history/setup).
+
+<Steps>
+  <Step title="Open the viewer">
+    Double-click `Metaweave-History-Viewer.html` from the same shared-drive folder that holds the form and the `history.json` file. Chrome opens a landing page with a single button.
+
+    <Frame caption="Landing page — first time you open the viewer.">
+      <img src="/images/history/viewer-landing.png" alt="Viewer landing page" />
+    </Frame>
+
+    On reopen the viewer auto-loads the previously linked file; you only see this landing page if no link is persisted yet (e.g. fresh browser profile, cleared site data).
+  </Step>
+
+  <Step title="Link history.json">
+    Click **Link history.json**. The native browser file picker opens. Pick the `history.json` file on the shared drive. Chrome shows a permission prompt — click **Allow**.
+
+    The viewer reads the JSON, populates the table, and persists the file handle in IndexedDB so you don't have to re-link next time.
+
+    <Tip>
+      You can link **any** JSON file that follows the history schema — `history.json`, `METAWEAVE-TEST-history.json`, `Sample-Vessel-history.json`, etc. The viewer doesn't hardcode a filename.
+    </Tip>
+  </Step>
+
+  <Step title="Pick a tab">
+    The left sidebar has four tabs. Click whichever report family you want to browse:
+
+    - **Voyage Reports** — Noon, Arrival, Departure
+    - **Statement of Facts** — SOF submissions
+    - **Bunker Reports** — bunker lifts
+    - **Month-End ROB** — month-end reconciliations
+
+    Each tab loads independently and remembers its own filter state for the session.
+  </Step>
+
+  <Step title="Filter">
+    The toolbar above each table has:
+
+    - **From / To** date inputs — restrict to a date range (filters by `reportDatetimeUtc`)
+    - **Search** — case-insensitive substring match on vessel name, IMO, voyage, port (200ms debounce)
+    - **Type pills** *(Voyage tab only)* — toggle NOON / ARRIVAL / DEPARTURE on/off
+
+    All filters AND together. Clearing a filter shows everything again.
+  </Step>
+
+  <Step title="Drill into a report">
+    Click any row in the table. A full-screen modal opens with every field for that submission organised into seven zones, plus event cards and child tables (per-tab).
+
+    <Frame caption="Detail modal — scalar zones at the top, event cards below.">
+      <img src="/images/history/viewer-drill-down.png" alt="Detail modal" />
+    </Frame>
+
+    Empty fields are skipped — only fields with actual values appear. The modal also has its own **Export Excel** and **Print** buttons for single-report exports.
+  </Step>
+
+  <Step title="Export filtered results">
+    The header has two export buttons:
+
+    - **Export CSV** — flat CSV of the current tab's filtered rows, ~11–13 columns
+    - **Export Excel** — multi-sheet SpreadsheetML `.xls` with one sheet per report (detailed breakdown by zone + events + child tables)
+
+    Filename pattern: `metaweave-history-{tab}-{YYYY-MM-DD}.{csv|xls}` — saves to your browser's default download folder.
+
+    A green toast confirms the export. If something fails, a red toast shows the error.
+  </Step>
+</Steps>
+
+## Re-link or unlink
+
+The header shows the linked filename, row count, and last-write timestamp. Two buttons:
+
+- **Re-link** — open the file picker again to switch to a different `history.json`
+- **Unlink** — clear the persisted handle (next open shows the landing page again)
+
+You'll need to re-link if:
+
+- You move `history.json` to a different folder
+- You clear browser site data
+- You switch browsers (each browser has its own IndexedDB)
+
+## Per-session Allow prompt
+
+Every new browser session, Chrome asks **"Allow this site to re-access `history.json`?"** before the first read. Click **Allow**. After that, the viewer reads silently for the rest of the session.
+
+This is a Chrome security feature — you can't grant indefinite permission to a `file://` HTML, only re-grant on demand.
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| "Unsupported browser — requires Chrome 86+ or Edge" | Open in Chrome or Edge. Firefox/Safari don't support FSA. |
+| "Could not read history.json: …" | Click **Re-link** and pick the file again. Often happens after the file moved or browser cache cleared. |
+| Tab is empty | Check the date filters — defaults to all dates, but make sure From/To aren't clipping the data. |
+| Counts wrong on a tab | The viewer routes by `reportType`. If a report has the wrong `reportType` it won't appear. Check `history.json` directly. |
+| Excel export shows raw XML | The export is SpreadsheetML 2003 format. Open with Excel, not Numbers or LibreOffice (most LibreOffice versions handle it; Numbers may not). |
+
+## See also
+
+- [Overview](/history/overview) — what the viewer does and doesn't do
+- [Setting up history.json](/history/setup) — the one-time setup story
+- [Data format](/history/data-format) — schema of each row

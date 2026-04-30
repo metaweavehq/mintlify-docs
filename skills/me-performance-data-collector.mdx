@@ -1,0 +1,46 @@
+---
+title: "ME Performance Data Collector"
+description: "Junior skill that fetches main engine telemetry — SFOC, cylinder data, exhaust, turbocharger — and files it as evidence."
+---
+
+## What it does
+
+The **ME Performance Data Collector** captures a vessel's main engine performance snapshot — SFOC, per-cylinder exhaust temperature, pressures, turbocharger metrics, overhaul hours — and files it as a timestamped evidence record. It pairs with the [ME Performance Analyzer](/skills/me-performance-analyzer): one fetches, one interprets.
+
+## When to use it
+
+- "Engine data"
+- "ME status"
+- "ME check"
+- "SFOC data"
+- "Fetch engine numbers"
+
+## What it captures
+
+- Engine running hours, load, RPM, power
+- SFOC actual at current load
+- Per-cylinder data: exhaust temperature, peak pressure, mean indicated pressure
+- Scavenge pressure, exhaust back-pressure
+- Turbocharger speed, boost pressure
+- Hours since last cylinder, top-end, and major overhaul
+- Active alarms
+
+## How it works
+
+1. Looks up the vessel by IMO.
+2. Pulls the latest ME telemetry from the configured source.
+3. Writes a timestamped evidence record under the vessel's ME case folder.
+4. Updates the case so any reviewing agent can see new evidence is available.
+
+## What it produces
+
+- Structured ME telemetry consumed by the analyzer
+- Plain-English summary covering load, SFOC, headline cylinder flags
+- Filing metadata (timestamp, source, sequence number)
+
+## Related skills
+
+- **me-performance-analyzer** — senior skill that turns this snapshot into a TSI review
+- **me-performance-microapp-data** — alternative collector with browser screenshots
+- **ae-performance-data-collector** — sister collector for auxiliary engines
+- **status-rollup** — fleet-wide aggregation

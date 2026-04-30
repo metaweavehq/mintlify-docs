@@ -1,0 +1,42 @@
+---
+title: "PMS Data Collector"
+description: "Junior skill that fetches a vessel's Planned Maintenance System job status and files it as evidence."
+---
+
+## What it does
+
+The **PMS Data Collector** captures the current state of a vessel's planned maintenance — every job's due date, last completion, status, criticality, and equipment — and files a timestamped snapshot. It pairs with the [PMS Analyzer](/skills/pms-analyzer): one fetches, one interprets.
+
+## When to use it
+
+- "Maintenance data"
+- "PMS status"
+- "Check overdue jobs"
+- "PMS check"
+
+## What it captures
+
+- Every PMS job for the vessel: equipment, description, frequency, due date, last done, status
+- Criticality (CRITICAL / MAJOR / ROUTINE)
+- Running hours where applicable
+- Recently completed jobs with completion date
+- Stuck jobs with blocker (parts, port, vendor)
+
+## How it works
+
+1. Looks up the vessel by IMO.
+2. Pulls the PMS job list from the configured source.
+3. Writes a timestamped evidence record under the vessel's PMS case folder.
+4. Updates the case so any reviewing agent can see new evidence is available.
+
+## What it produces
+
+- Structured PMS data consumed by the analyzer
+- Plain-English summary covering total jobs, on-time count, overdue count, criticality split
+- Filing metadata (timestamp, source, sequence number)
+
+## Related skills
+
+- **pms-analyzer** — senior skill that turns this snapshot into a maintenance review
+- **defect-data-collector** — sister collector for defect tracking
+- **status-rollup** — fleet-wide aggregation

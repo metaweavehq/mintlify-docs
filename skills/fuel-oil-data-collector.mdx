@@ -1,0 +1,42 @@
+---
+title: "Fuel Oil Data Collector"
+description: "Junior skill that fetches a vessel's fuel ROB, consumption, and lab quality data and files it as evidence."
+---
+
+## What it does
+
+The **Fuel Oil Data Collector** captures a vessel's current fuel posture — remaining onboard (ROB) by grade, daily consumption, and the latest lab quality results — and files a timestamped snapshot. It pairs with the [Fuel Oil Analyzer](/skills/fuel-oil-analyzer): one fetches, one interprets.
+
+## When to use it
+
+- "Fuel check"
+- "Bunker check"
+- "ROB update"
+- "Bunker data for AQUILA"
+
+## What it captures
+
+- ROB by tank and grade (MGO, VLSFO, HSFO, etc.)
+- Daily consumption (main engine, auxiliary engines, boilers)
+- Latest lab analysis with viscosity, density, sulphur, cat fines, water, sediment
+- Stem schedule and supplier
+- Recent bunkerings with quantity, supplier, BDN
+
+## How it works
+
+1. Looks up the vessel by IMO.
+2. Pulls ROB, consumption, and lab data from the configured source.
+3. Writes a timestamped evidence record under the vessel's bunker reports case folder.
+4. Updates the case so any reviewing agent can see new evidence is available.
+
+## What it produces
+
+- Structured fuel data consumed by the analyzer
+- Plain-English summary covering ROB by grade, days of fuel, headline quality flags
+- Filing metadata (timestamp, source, sequence number)
+
+## Related skills
+
+- **fuel-oil-analyzer** — senior skill that turns this snapshot into a fuel review
+- **lube-oil-data-collector** — sister collector for lubricants
+- **status-rollup** — fleet-wide aggregation

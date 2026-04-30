@@ -1,0 +1,146 @@
+---
+title: "Configuration"
+description: "Every environment variable the pipeline reads, where it's used, and what happens if it's missing."
+---
+
+All configuration is via environment variables, loaded with `python-dotenv`. `config.py` reads the local `.env` in the pipeline directory; shell variables take precedence.
+
+## Required variables
+
+### Microsoft Graph (Outlook fetch)
+
+| Variable | Purpose |
+|---|---|
+| `AZURE_TENANT_ID` | Your Azure AD tenant ID — used to build the OAuth2 authority URL |
+| `AZURE_CLIENT_ID` | App registration's client ID |
+| `AZURE_CLIENT_SECRET` | App registration's client secret |
+| `OUTLOOK_USER_EMAIL` | Mailbox address the script reads from (e.g. `metaweave-forms@yourcompany.com`) |
+
+The app registration needs **application permissions** (not delegated) on Microsoft Graph:
+
+- `Mail.Read`
+- `Mail.ReadWrite` (to mark messages as read)
+
+If any of these are missing, the fetcher fails on first call with `ValueError: AZURE_TENANT_ID is required`.
+
+### PostgreSQL (Cloud SQL)
+
+| Variable | Purpose |
+|---|---|
+| `GOOGLE_SERVICE_ACCOUNT_BASE64` | Base64-encoded service account JSON. Decoded in-memory and passed to Cloud SQL Connector |
+| `CLOUD_SQL_INSTANCE_CONNECTION_NAME` | `project:region:instance` — your Cloud SQL instance |
+| `POSTGRES_USER` | Database user |
+| `POSTGRES_PASSWORD` | Database password (shell-escape `$` as `\$`) |
+| `POSTGRES_DB` | Database name |
+
+Cloud SQL Connector tunnels via Google's IAM auth — no public IP needed on the database. The service account must have at least `cloudsql.instances.connect` and `cloudsql.client` IAM roles on the instance.
+
+If any are missing, the writer fails when the first session is opened with a Cloud SQL Connector error.
+
+## Optional variables
+
+### Encryption key
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `MW_AES_KEY` | `mw7k2x9p4q8n3v5h` | 16-byte UTF-8 string used as AES-128-CBC key + IV |
+
+If you change this in the pipeline, you must also change it in the form's CryptoJS config — the two **must match exactly**, byte-for-byte. The key length must remain 16 bytes (AES-128).
+
+To rotate the key:
+
+1. Generate a new 16-character ASCII string
+2. Update `MW_AES_KEY` in the pipeline env
+3. Update the form's embedded key constant
+4. Re-export the configured HTML for each vessel
+5. Distribute the new HTML to the fleet
+6. Existing emails encrypted with the old key will fail decryption — keep both keys for the transition window if needed
+
+## Other constants
+
+These live in `src/config.py` as module constants (not env vars). Override by editing the file.
+
+### Markers
+
+```python
+MARKER_BEGIN = "BEGIN MW FORM DATA"
+MARKER_END = "END MW FORM DATA"
+```
+
+The parser looks for these strings to find the encrypted block. If the form's markers change, update both sides.
+
+### Subject regex
+
+```python
+SUBJECT_PATTERN = re.compile(
+    r"Metaweave Forms:\s*(.+?)\s*-\s*(.+?)\s*-\s*(\d{2}\.\d{2}\.\d{4})"
+)
+```
+
+Captures vessel name, report type, date (DD.MM.YYYY). Subjects that don't match are filtered out by the fetcher.
+
+### Report type mapping
+
+```python
+REPORT_TYPE_MAP = {
+    "Noon Report":         "NOON",
+    "Arrival Notice":      "ARRIVAL",
+    "Departure Notice":    "DEPARTURE",
+    "Bunker Report":       "BUNKER",
+    "Statement of Facts":  "SOF",
+}
+```
+
+Maps the human-readable subject text to the canonical type stored in `metaweave_report.report_type`. Add new entries here when the form ships a new report type.
+
+## Sample `.env`
+
+```bash
+# Microsoft Graph (Outlook)
+AZURE_TENANT_ID=8a9c...e123
+AZURE_CLIENT_ID=12345678-aaaa-bbbb-cccc-dddddddddddd
+AZURE_CLIENT_SECRET=Wzy~aaaQ.oooHelloThereSecretValue
+OUTLOOK_USER_EMAIL=metaweave-forms@yourcompany.com
+
+# Encryption (default works for stock setup)
+MW_AES_KEY=mw7k2x9p4q8n3v5h
+
+# Cloud SQL
+GOOGLE_SERVICE_ACCOUNT_BASE64=ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQi...
+CLOUD_SQL_INSTANCE_CONNECTION_NAME=my-gcp-project:asia-south1:emissions-db
+POSTGRES_USER=metaweave_writer
+POSTGRES_PASSWORD=somepassword
+POSTGRES_DB=emissions
+```
+
+Encode the service account JSON with:
+
+```bash
+base64 -w0 service-account.json    # Linux
+base64 -i service-account.json     # macOS
+```
+
+(or `cat service-account.json | base64 | tr -d '\n'`)
+
+## How config is loaded
+
+```text
+src/config.py loads dotenv from .env in the current working directory,
+then reads each env var with os.getenv(). Shell vars override .env values.
+```
+
+## What's not configurable
+
+The pipeline does **not** support:
+
+- Multiple Outlook mailboxes per run (one mailbox per invocation)
+- Multiple databases per run
+- Different schema per environment (use different `POSTGRES_DB`)
+- Different table prefix (the `metaweave_` prefix is hardcoded)
+
+For multi-tenant deployments, run multiple instances with different env files and orchestrate via your scheduler.
+
+## See also
+
+- [Installation](/pipeline/installation) — initial setup
+- [Running](/pipeline/running) — operational invocation
