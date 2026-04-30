@@ -38,3 +38,27 @@ nav[aria-label*="on this page" i],
 #table-of-contents {
   display: none !important;
 }
+
+/* ─── Make content fully fluid (no max-width cap) ─── */
+/* Removes Mintlify's prose width cap so the article fills the
+   available space between the left sidebar and the right edge. */
+main,
+main > article,
+article.prose,
+[class*="prose"],
+[class*="ContentArea"],
+[class*="content-area"],
+[class*="DocsContent"] {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Cap utility classes that Mintlify uses on inner wrappers */
+.max-w-3xl,
+.max-w-4xl,
+.max-w-5xl,
+.max-w-6xl,
+.max-w-7xl,
+.max-w-prose {
+  max-width: 100% !important;
+}
