@@ -1,0 +1,246 @@
+---
+title: "Voyage Performance Surveillance"
+description: "Position, track history, Charter Party compliance, weather-routed performance and demurrage exposure — voyage-level intelligence in one rolling view."
+---
+
+<Frame caption="Voyage Performance Surveillance — AIS, weather, and noon reports filtered through Charter Party terms to produce per-leg performance and claim probability.">
+  <img src="/images/hero/voyage-performance-surveillance-whitepaper.png" alt="Voyage Performance Surveillance pipeline reading position, weather, and operational data into a CP-aware leg-by-leg performance view" style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
+</Frame>
+
+A voyage isn't a single thing. It's a sequence of legs — sea passage, port approach, port stay, cargo operation, departure, sea passage again. Each leg has its own performance shape, its own commercial implications, and its own way of going wrong. The vessel that arrives at Singapore three days late may have been below CP speed, or above CP speed but routed through bad weather, or stuck in a charterer-induced port delay — and the appropriate conversation is different for each.
+
+The **Voyage Performance Surveillance** pipeline reads the noon-report stream, the position track, and the Charter Party terms together, and produces a leg-by-leg performance view that resolves the ambiguity.
+
+---
+
+## Where the data comes from
+
+| Data | Source | Cadence |
+|------|--------|---------|
+| Position | <img src="/images/brands/ais.svg" alt="AIS" style={{ height: '24px', width: 'auto', display: 'inline-block', verticalAlign: 'middle' }} /> **AIS** (Automatic Identification System) + noon report | Continuous + daily |
+| Speed | Noon report | Daily noon-to-noon |
+| FOC by grade | Noon report | Daily |
+| Weather (wind, sea, current) | Noon report + <img src="/images/brands/stormglass.svg" alt="Stormglass" style={{ height: '24px', width: 'auto', display: 'inline-block', verticalAlign: 'middle' }} /> **Stormglass** + <img src="/images/brands/navtor.svg" alt="NAVTOR" style={{ height: '24px', width: 'auto', display: 'inline-block', verticalAlign: 'middle' }} /> **NAVTOR** routing feed | Daily |
+| Routing analysis | <img src="/images/brands/navtor.svg" alt="NAVTOR" style={{ height: '24px', width: 'auto', display: 'inline-block', verticalAlign: 'middle' }} /> **NAVTOR** (route optimisation) | Per voyage |
+| Sea time / port time | ERP voyage log | Per voyage |
+| Charter Party terms | CP file in vessel records | Per charter |
+| ETA vs laycan | Voyage plan in ERP | Continuous |
+| Port call data | ERP port module | Per port call |
+
+Position and weather come from external feeds (AIS, Stormglass, NAVTOR); operational data (FOC, sea/port time, voyage log) comes from the ERP and the vessel's noon report stream. The Charter Party file lives in the vessel record and gets re-read on every analysis run so changes mid-voyage are reflected immediately.
+
+Two map views keep the position context honest:
+
+<Tabs>
+  <Tab title="Vessel detail">
+    Single vessel with current position pinned and past 7 days of track history overlaid. Used when reviewing one voyage in detail.
+  </Tab>
+  <Tab title="Fleet view">
+    All active vessels on one map with each vessel's 7-day track. Used for fleet-wide reviews and when looking for spatial patterns (vessel cluster around a slow port, fleet-wide ECA exposure).
+  </Tab>
+</Tabs>
+
+---
+
+## Charter Party compliance — the central question
+
+Most voyage analysis questions reduce to *"is the vessel performing within Charter Party?"* The CP defines a "good weather" envelope and a warranted speed-and-consumption profile within that envelope:
+
+```text
+GOOD WEATHER ENVELOPE (typical CP)
+   Wind:    Beaufort scale ≤ 4
+   Sea:     Douglas sea state ≤ 3
+   Current: ≤ ±0.5 knot favourable / adverse
+   Swell:   ≤ 2 m
+
+WARRANTED PERFORMANCE (within envelope)
+   Speed:           14.0 kn (laden) / 14.5 kn (ballast)
+   FOC at sea:      28.5 MT/day VLSFO
+   FOC in port:      3.2 MT/day MGO
+```
+
+The pipeline filters every voyage leg to its good-weather subset, then computes the per-leg deviation:
+
+$$
+\Delta V = V_\text{actual} - V_\text{CP}
+$$
+
+$$
+\Delta \text{FOC} = \text{FOC}_\text{actual} - \text{FOC}_\text{CP}
+$$
+
+A negative speed deviation under good weather **with a positive consumption deviation** is the textbook under-performance pattern that drives owner-vs-charterer disputes. A negative speed deviation in **bad weather** isn't a CP issue — the warranted speed doesn't apply.
+
+---
+
+## Why weather filtering matters
+
+Naively averaging speed across an entire voyage produces meaningless numbers. A vessel that hit a Beaufort 8 storm for two days and ran at 9 knots will look like a CP underperformer even if it ran at 14.2 knots through every good-weather leg. The pipeline applies the filter first, then runs the maths:
+
+```python
+def good_weather_legs(legs, cp_envelope):
+    """Filter legs to those within CP good-weather definition."""
+    out = []
+    for leg in legs:
+        if leg["wind_bf"]   > cp_envelope["wind_max"]:    continue
+        if leg["sea_ds"]    > cp_envelope["sea_max"]:     continue
+        if abs(leg["current_kn"]) > cp_envelope["current_max"]: continue
+        if leg["swell_m"]   > cp_envelope["swell_max"]:   continue
+        out.append(leg)
+    return out
+
+def cp_performance(good_legs, cp):
+    """Compute mean deviation of speed and FOC under good-weather conditions."""
+    if not good_legs:
+        return {"verdict": "Insufficient good-weather data", "coverage": 0.0}
+    n = len(good_legs)
+    delta_v   = sum(leg["speed_kn"]  - cp["warranted_speed"]   for leg in good_legs) / n
+    delta_foc = sum(leg["foc_mt"]    - cp["warranted_foc"]     for leg in good_legs) / n
+    return {
+        "delta_v":     delta_v,
+        "delta_foc":   delta_foc,
+        "good_legs":   n,
+        "coverage":    n / len(legs),
+    }
+```
+
+Coverage matters because a voyage with only 10% good-weather legs has too small a sample to support a CP claim either way. The pipeline reports coverage alongside the deviation — a TSI sees both.
+
+---
+
+## ETA vs laycan
+
+Beyond CP performance, the timeliness question:
+
+| Metric | Calculation |
+|--------|-------------|
+| Projected ETA | Current position + remaining distance / projected speed |
+| Time to laycan start | $t_\text{laycan\_start} - t_\text{ETA}$ |
+| Time to laycan end | $t_\text{laycan\_end} - t_\text{ETA}$ |
+
+Verdict:
+
+| Condition | Verdict |
+|-----------|---------|
+| ETA before laycan start with margin | Early — risk of demurrage if charterer not ready |
+| ETA inside laycan | On-window |
+| ETA after laycan end | Late — penalty exposure |
+
+The pipeline updates the ETA every noon report so a TSI sees drift as it happens, not at port-call time.
+
+---
+
+## Claim probability
+
+A composite that combines the deviation magnitude, the good-weather coverage, and CP wording sensitivity:
+
+$$
+P_\text{claim} = w_1 \cdot \overline{|\Delta V|} + w_2 \cdot \overline{|\Delta \text{FOC}|} + w_3 \cdot (1 - C_\text{good-wx})
+$$
+
+The third term is what protects against weak claims. Low good-weather coverage means the data is insufficient to support the deviation either way — the score reflects that.
+
+| $P_\text{claim}$ band | Action |
+|------------------------|--------|
+| Low | Routine — log and continue |
+| Medium | Owner brief — document for next charter |
+| High | Active claim or counter-claim risk — engage commercial |
+| Critical | Significant exposure — legal advisory |
+
+---
+
+## Slow-steaming and bad-weather routing
+
+Two patterns the pipeline flags specifically:
+
+### Slow-steaming
+
+A vessel deliberately running below CP speed (typically owner-instructed for fuel saving). Looks like underperformance unless the CP allows slow-steaming. The pipeline checks the CP terms and the master's voyage instructions — if both agree, the leg is excluded from the deviation calculation.
+
+### Bad-weather routing
+
+When a master chose a longer route to avoid weather. Shows up as a longer voyage at lower average speed. Cross-references the [fuel oil pipeline](/skills/fuel-oil) for FOC over the routed leg vs the rhumb-line projection — sometimes a longer route is the lower-cost option even though it looks slower on the speed metric.
+
+---
+
+## Worked example: a CP-claim case on `MV POSUN`
+
+Voyage: Singapore to Rotterdam, 21 days at sea, laden.
+
+| Leg type | Days | Avg speed | Avg FOC | Notes |
+|----------|------|-----------|---------|-------|
+| Good weather | 14 | 13.2 kn | 30.6 MT | Below CP (14.0 kn / 28.5 MT) |
+| Bad weather | 5 | 11.4 kn | 32.8 MT | Excluded from CP calculation |
+| Slow-steaming (instructed) | 2 | 11.0 kn | 27.4 MT | Excluded |
+
+Filtered to good-weather legs only:
+
+| Metric | Value |
+|--------|-------|
+| Good-weather coverage | 67% |
+| $\overline{\Delta V}$ | -0.8 kn |
+| $\overline{\Delta \text{FOC}}$ | +2.1 MT/day |
+
+**Verdict**: Sustained underperformance under good weather — claim probability HIGH.
+
+The pipeline:
+
+1. Generates a CP-claim brief with the per-leg numbers, weather classification, and the deviation maths.
+2. Routes to the Commercial Operator (claim handling) and Technical Superintendent (root cause — fouled hull? Engine issue?).
+3. Cross-references with [ME performance](/skills/me-performance) for engine condition signals and [fuel oil](/skills/fuel-oil) for fuel-quality signals.
+
+---
+
+## What the senior review contains
+
+1. **Voyage map** — current position, 7-day track, ETA marker.
+2. **Leg-by-leg table** — distance, speed, FOC, weather classification per leg.
+3. **CP compliance** — good-weather coverage, $\Delta V$, $\Delta \text{FOC}$, verdict.
+4. **ETA vs laycan** — projected arrival, demurrage / despatch implications.
+5. **Claim probability** — composite score with contributing factors.
+6. **Bad-weather routing assessment** — if a routing decision occurred, the cost-benefit analysis.
+7. **Cross-domain notes** — engine, fuel, hull-fouling signals that touch performance.
+8. **Recommendations** — operational, owner-communication, commercial actions.
+9. **Escalation decision** — to whom, and why.
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Speed deficit &gt;5% under good weather sustained 3+ legs | HIGH |
+| Consumption excess &gt;5% under good weather sustained 3+ legs | HIGH |
+| ETA threatening laycan end | HIGH |
+| Claim probability score = HIGH or CRITICAL | CRITICAL |
+| Pattern across 3+ consecutive voyages | CRITICAL |
+| Weather routing decision adding &gt;10% to passage time | per case |
+
+---
+
+## Why the pipeline reads CP terms first
+
+A voyage analysis without CP context misses the entire commercial dimension. A 0.5-knot deficit may or may not be a claim depending on CP wording — some CPs allow that as natural variation; others penalise it as breach of warranted speed. The pipeline reads the CP first, computes against the CP-defined envelope, and produces verdicts that map to the wording the lawyers will eventually argue over.
+
+<Note>
+Voyage analysis is one of the few places where the same numbers are read by completely different audiences — owner, charterer, commercial operator, master, TSI. The pipeline keeps all of them in one document so when the dispute starts, everyone is reading from the same numbers.
+</Note>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Templates: eta-voyage" icon="map">
+    ETA-voyage suite — single-vessel position with 7-day track and the fleet-wide map view.
+  </Card>
+  <Card title="Related: Fuel oil" icon="gas-pump" href="/skills/fuel-oil">
+    Consumption deviation traces back to fuel quality or quantity in many cases.
+  </Card>
+  <Card title="Related: ME performance" icon="ship" href="/skills/me-performance">
+    Sustained underperformance under good weather often correlates with cylinder asymmetry or turbocharger fouling.
+  </Card>
+  <Card title="Related: Emissions" icon="cloud" href="/skills/cii-emissions-microapp-data">
+    CII attained value is voyage-driven; ECA exposure depends on the route.
+  </Card>
+</CardGroup>

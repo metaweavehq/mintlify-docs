@@ -1,0 +1,327 @@
+---
+title: "Lube Oil Surveillance"
+description: "End-to-end pipeline that captures lube oil lab analysis, shore-sampling compliance, tank ROB, and consumption — flags wear-metal trends, contamination, and bunker planning gaps."
+---
+
+## Executive summary
+
+Lube oil is the cheapest insurance policy on a vessel. A single sample tells a Technical Superintendent whether a bearing is wearing, whether seawater is leaking into the cooler, whether fuel is diluting the crankcase, whether the FW generator membrane is failing. Lube oil also moves through tanks: ROB management, bunker planning, and the cost of running out at sea — all driven by the same numbers.
+
+The **Lube Oil Surveillance** pipeline tracks four parallel streams:
+
+1. **Shore analysis results** — wear metals, additives, contaminants, TBN, viscosity from the lab
+2. **Sampling compliance** — per-machinery sample dates, frequency, next-due, overdue flags
+3. **Tank ROB &amp; bunker planning** — distribution by tank, capacity, recommended intake to reach 85%
+4. **Daily consumption** — AE crankcase oil from the consumption form, compared against maker limits
+
+Together, the four streams answer the only three questions a TSI cares about: Is the equipment wearing? Are samples on schedule? And do we have enough oil onboard to reach the next bunker?
+
+## Architecture
+
+```
+       ┌────────────────────────────────────────────┐
+       │  Lab feed · vessel forms · ROB inventory   │
+       └─────────────────────┬─────────────────────┘
+                             │ samples + tank data
+                             ▼
+       ┌────────────────────────────────────────────┐
+       │   Stage 1 — Collection                       │
+       │   Per-vessel snapshot of lab batch +         │
+       │   shore schedule + tank ROB + consumption    │
+       └─────────────────────┬─────────────────────┘
+                             │ structured evidence
+                             ▼
+       ┌────────────────────────────────────────────┐
+       │   Stage 2 — Analysis                          │
+       │   • Wear-metal trends                          │
+       │   • Contamination flags                        │
+       │   • TBN reserve & viscosity drift              │
+       │   • Sampling compliance vs schedule            │
+       │   • Tank distribution & bunker planning        │
+       │   • Daily consumption vs maker limits          │
+       └─────────────────────┬─────────────────────┘
+                             │ verdict + scores
+                             ▼
+       ┌────────────────────────────────────────────┐
+       │   Stage 3 — Expert review                    │
+       │   Auto-escalate to TSI when triggered       │
+       └────────────────────────────────────────────┘
+```
+
+---
+
+## Stage 1 — Data collection
+
+### Where the data comes from
+
+The lube-oil pipeline pulls data from three independent surfaces and reconciles them:
+
+| Source | What it provides |
+|--------|------------------|
+| **Lab analysis (shore samples)** | Wear metals, additives, contaminants, TBN, viscosity per equipment |
+| **Vessel-side LO forms** | Daily AE crankcase oil consumption + monthly lube-oil ROB |
+| **ERP (LO inventory)** | Tank distribution, capacities, supplier records |
+
+Lab analysis is sourced from any of the major marine lube-oil laboratories the vessel uses:
+
+| | Laboratory | Specialty |
+|---|------------|-----------|
+| <img src="/images/brands/castrol.svg" alt="Castrol" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Castrol** | Lab-mail integration |
+| <img src="/images/brands/chevron.svg" alt="Chevron" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Chevron** | Lab-mail integration |
+| <img src="/images/brands/exxonmobil.svg" alt="Mobil Serv" style={{ height: '28px', width: 'auto', display: 'inline-block' }} /> | **Mobil Serv** (ExxonMobil) | Lab-mail + API |
+| <img src="/images/brands/shell.svg" alt="Shell" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Shell** | Lab-mail integration |
+| <img src="/images/brands/total.svg" alt="TotalEnergies" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **TotalEnergies** | Lab-mail integration |
+| <img src="/images/brands/gulf.svg" alt="Gulf" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Gulf** | Lab-mail integration |
+| <img src="/images/brands/maritec.svg" alt="Maritec" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Maritec** | Lab-mail integration |
+| <img src="/images/brands/marlab.svg" alt="Marlab" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Marlab** | Lab-mail integration |
+| <img src="/images/brands/vps.svg" alt="VPS" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **VPS** — Veritas Petroleum Services | Lab-mail integration |
+| <img src="/images/brands/tribocare.svg" alt="Tribocare" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Tribocare** | Lab-mail + API |
+| <img src="/images/brands/viswa.svg" alt="Viswa Lab" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Viswa Lab** | Lab-mail + API |
+
+Most labs send results by email; the pipeline parses the lab report (PDF or structured email body) and normalises into the same shape regardless of source.
+
+For each lubricated equipment (main engine system oil, cylinder oil, AE crankcase, hydraulics, gearboxes), the collector captures:
+
+### Lab analysis
+
+| Domain | Parameters |
+|--------|-----------|
+| Wear metals | Fe, Cu, Pb, Sn, Cr, Al |
+| Additive metals | Zn, Ca, Mg, P |
+| Contaminants | Water, fuel dilution, soot, silicon |
+| Oil condition | Viscosity at 40 °C and 100 °C, TBN, TAN, oxidation |
+| Sample meta | Sample date, equipment running hours at sample, lab |
+
+### Sampling schedule
+
+Per machinery: sample frequency, last sample date, next-due date, due-status (Overdue / Due / In Order), test lab, report links, line items per past sample.
+
+### Tank ROB
+
+Per tank: grade, tank name, current ROB (litres), 100% capacity, 85% capacity, ullage, calculated bunker intake to reach 85%.
+
+### Daily consumption
+
+Per AE per day from the consumption form: crankcase oil consumption (L/day), running hours, comparison vs maker limit.
+
+---
+
+## Stage 2 — Analysis
+
+### 2.1 Wear-metal trends
+
+For each metal the analyzer computes period-over-period change:
+
+$$
+\dot{m} = \frac{m_n - m_{n-1}}{\Delta t}
+$$
+
+A step jump where $m_n > 2 \cdot m_{n-1}$ is treated as a discrete event, not noise — bearing wear, ring failure, contamination ingress are all step events; gradual rise across three samples is a different signature.
+
+| Pattern | Likely cause |
+|---------|--------------|
+| Iron rising, gradual | Liner / ring wear |
+| Iron + chromium step jump | Ring failure |
+| Copper rising | Bearing wear |
+| Lead + tin rising | Big-end bearing wear |
+| Aluminium present at all | Piston / piston-pin damage |
+| Silicon above 25 ppm | Dirt / air-filter ingress |
+
+### 2.2 Contamination flags
+
+Each contaminant maps to a specific equipment risk:
+
+| Parameter | Threshold | Risk |
+|-----------|-----------|------|
+| Water | Above engine spec | Cooler leak, condensation |
+| Fuel dilution | $> 5\%$ | Injector leak, fuel-pump seal |
+| Soot | Above engine spec | Combustion incomplete, ring blow-by |
+| Silicon | $> 25$ ppm | Dirt ingress, air-filter failure |
+
+### 2.3 TBN reserve and viscosity drift
+
+TBN reserve is tracked against the fresh-oil baseline:
+
+$$
+\text{TBN reserve \%} = \frac{\text{TBN}_\text{current}}{\text{TBN}_\text{new}} \times 100
+$$
+
+Tier:
+
+- $\geq 75\%$ — Healthy
+- $50\% \leq \text{TBN reserve} < 75\%$ — Trend down, monitor
+- $25\% \leq \text{TBN reserve} < 50\%$ — Oil change discussion
+- $< 25\%$ — Overdue
+
+Viscosity drift outside maker spec at either 40 °C or 100 °C indicates fuel dilution (drop) or oxidation (rise).
+
+### 2.4 Sampling compliance
+
+Per machinery, the analyzer enforces the sample frequency:
+
+$$
+D_\text{next} = D_\text{last} + F \quad \text{where } F \text{ is the configured frequency}
+$$
+
+$$
+\Delta_\text{days} = D_\text{next} - D_\text{today}
+$$
+
+Status mapping:
+
+| Verdict | Condition |
+|---------|-----------|
+| Overdue | $\Delta_\text{days} \leq 0$ |
+| Due Soon | $0 < \Delta_\text{days} \leq 14$ |
+| In Order | $\Delta_\text{days} > 14$ |
+
+The per-machinery view assembles the same shape across every lubricated component. Condensed:
+
+```python
+formatted_row = [
+    row["machineryName"],
+    {"status": row["reportStatus"],
+     "color": status_to_color_mappping.get(row["reportStatus"], "grey")},
+    row["sampleDate"].strftime("%Y-%m-%d"),
+    row["nextDue"].strftime("%Y-%m-%d"),
+    row["frequency"],
+    {"status": row["dueStatus"],
+     "color": status_to_color_mappping.get(row["dueStatus"], "grey")},
+    row["testLab"],
+    report_links,                     # downloadable lab report
+    {"lineitem": lineitem[index]},    # historical sample list
+]
+```
+
+A vessel that is consistently overdue on samples will eventually show the wear it failed to detect — sampling gaps are the leading indicator of analytical blindness, not just a paperwork issue.
+
+### 2.5 Tank distribution &amp; bunker planning
+
+For each tank, the analyzer computes how much to bunker to reach 85% capacity (the safe operating headroom):
+
+$$
+\text{Bunker intake} = (0.85 \cdot V_\text{capacity}) - V_\text{current}
+$$
+
+where $V_\text{capacity}$ is the 100% tank capacity and $V_\text{current}$ is the current ROB. Negative intake means the tank is already above 85% — flag for ullage check.
+
+The aggregate view collapses intake across all tanks per grade, then surfaces the recommended order quantity per grade for the next bunker call.
+
+### 2.6 Daily consumption vs maker limit
+
+For AE crankcase oil from the consumption form:
+
+$$
+C_\text{daily} = \frac{V_\text{consumed (L)}}{H_\text{running}} \quad \text{[L/h]}
+$$
+
+Compared against the maker's specification limit:
+
+$$
+\text{Variance \%} = \frac{C_\text{daily} - C_\text{spec}}{C_\text{spec}} \times 100
+$$
+
+Sustained variance above 20% signals piston-ring blow-by or excessive cylinder feed-rate — both are top-end overhaul candidates.
+
+### 2.7 Equipment-pattern correlation
+
+The analyzer cross-references LO trends with equipment running hours and recent overhauls — wear after a recent overhaul is break-in; sustained wear well into a service interval is accelerated degradation. Cylinder cylinder uniformity findings on the [main engine](/skills/me-performance) often confirm or rule out a wear-metal trend on the same engine.
+
+---
+
+## Worked example
+
+**Vessel**: `MV POSUN`, MAN 6S60ME-C main engine.
+
+After a refresh:
+
+| Equipment | Sample | Findings |
+|-----------|--------|----------|
+| ME system oil | 2026-04-12 | Iron 42 → 68 ppm (+62% step), silicon 8 ppm — bearing wear suspect |
+| ME cylinder oil | 2026-04-08 | TBN reserve 48% — trend down; flag for change |
+| AE1 crankcase | 2026-04-15 | Fuel dilution 3.2% — within range |
+| AE3 crankcase | sample overdue 38 days | analytical blind spot |
+| Hydraulics | 2026-03-20 | OK |
+
+**LO tank ROB**:
+
+| Grade | ROB (L) | 85% capacity (L) | Bunker intake (L) |
+|-------|---------|------------------|--------------------|
+| ME system | 8,400 | 12,750 | 4,350 |
+| Cyl oil | 18,200 | 21,250 | 3,050 |
+| AE crankcase | 1,250 | 1,275 | 25 |
+
+**Verdict**: HIGH — ME system oil iron step-jump combined with sample overdue on AE3 means the analyzer is missing data on one engine while another shows accelerating wear.
+
+The pipeline:
+
+1. Tags the run with `escalation_required: true`
+2. Updates the case to `awaiting-tsi-review`, priority CRITICAL
+3. Sends an A2A message to the TSI inbox with the wear-metal evidence and the bunker-planning view
+
+**Recommended actions**:
+
+1. Investigate ME system oil iron step-jump — pull bearing inspection at next port.
+2. Schedule AE3 LO sample within 48h — restore sampling cadence.
+3. Plan ME cylinder oil change at next port — TBN reserve below 50%.
+4. Bunker request: ME system 4,350 L, cylinder 3,050 L; AE crankcase already at 85%.
+
+---
+
+## Output deliverables
+
+- **Executive summary** — overall LO posture, headline flags
+- **Per-equipment lab table** — wear metals, additives, contaminants, TBN, viscosity
+- **Wear-metal trend chart** — period-on-period rate of change per metal
+- **Contamination findings** — per equipment with likely cause
+- **TBN &amp; viscosity status** — reserve %, drift direction
+- **Sampling compliance** — per machinery, next due, overdue list, link to lab report
+- **Tank ROB &amp; bunker plan** — per grade, recommended intake to reach 85%
+- **Daily consumption** — AE crankcase oil vs maker limit
+- **Equipment correlation** — recent overhauls, running hours, ME / AE cross-reference
+- **Recommendations** — prioritised by impact, with timeline
+- **Escalation decision** — auto-routed to TSI when triggered
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Wear metal above CRITICAL threshold | CRITICAL |
+| Step jump in any wear metal | HIGH |
+| Water above engine spec | HIGH |
+| Fuel dilution above 5% | CRITICAL |
+| TBN reserve below 25% | HIGH |
+| Sample overdue more than 30 days | HIGH |
+| Daily consumption variance above 20% sustained | HIGH |
+| Tank ROB below safety reserve with no stem | CRITICAL |
+
+---
+
+## Why script-driven
+
+Wear-metal rate maths, TBN-reserve calculation, sampling-frequency arithmetic, and bunker-intake formula all live in deterministic Python. The reviewer interprets the result; verdicts are reproducible. A wear-metal trend that flips from "monitor" to "escalate" between two samples is a real change in the data, not a model decision.
+
+<Note>
+Sample compliance and lab analysis matter together. A vessel sampling on time but ignoring the trend is not better than a vessel skipping samples — both end with the same engine overhaul. The pipeline reports both streams in the same review so the TSI sees them together.
+</Note>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Templates: lube-oil-analysis" icon="droplet">
+    Lube-oil-analysis suite — shore-analysis status and tank distribution &amp; bunker planning.
+  </Card>
+  <Card title="Templates: performance-analysis" icon="code">
+    Performance-analysis suite — AE LO consumption, shore-analysis data, and shore-analysis scheduling.
+  </Card>
+  <Card title="Related: ME performance" icon="ship" href="/skills/me-performance">
+    Wear metals confirm or rule out cylinder findings on the main engine.
+  </Card>
+  <Card title="Related: AE performance" icon="bolt" href="/skills/ae-performance">
+    Crankcase oil consumption is the top-end overhaul leading indicator for AEs.
+  </Card>
+</CardGroup>

@@ -1,0 +1,266 @@
+---
+title: "Compliance Surveillance"
+description: "PSC, SIRE 2.0, CDI, VIR and CII — five regulatory regimes, one detention-and-commercial-impact view."
+---
+
+<Frame caption="Compliance Surveillance — five regulatory regimes (PSC, SIRE 2.0, CDI, VIR, CII) read together, scored, and routed to one ranked verdict.">
+  <img src="/images/hero/compliance-surveillance-whitepaper.png" alt="Compliance Surveillance pipeline reading PSC MoUs, OCIMF SIRE, CDI, VIR, and CII into a unified detention-risk and commercial-impact verdict" style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
+</Frame>
+
+A vessel operates inside a regulatory cage made of five overlapping regimes. Each has its own inspectorate, its own scoring system, its own remedy timeline. A finding in one can compound a finding in another. A repeat finding across regimes is the signal that something fundamentally isn't working.
+
+| Regime | Issued by | What it controls |
+|--------|-----------|------------------|
+| **PSC** | Port State Control authorities | Right to enter and leave port |
+| **SIRE 2.0** | OCIMF (oil major vetting) | Eligibility for tanker charter |
+| **CDI** | Chemical Distribution Institute | Eligibility for chemical-tanker charter |
+| **VIR** | Charterer / inspector inspections | Per-charter performance |
+| **CII** | IMO Carbon Intensity Indicator | Annual rating against required intensity |
+
+The **Compliance Surveillance** pipeline reads all five together. Detention risk depends on more than just PSC; commercial-charter eligibility depends on more than just SIRE. The pipeline produces one ranked verdict — what's most likely to bite, in what regime, and what to do about it.
+
+---
+
+## Where the data comes from
+
+Each regime publishes its data through a different surface. The pipeline pulls from each independently:
+
+| Regime | Source |
+|--------|--------|
+| **PSC** | Port-state-control regime portals (see logo grid below) |
+| **SIRE 2.0** | <img src="/images/brands/ocimf.svg" alt="OCIMF" style={{ height: '28px', width: 'auto', display: 'inline-block', verticalAlign: 'middle' }} /> **OCIMF** SIRE 2.0 portal |
+| **CDI** | <img src="/images/brands/cdi.svg" alt="CDI" style={{ height: '28px', width: 'auto', display: 'inline-block', verticalAlign: 'middle' }} /> **CDI** — Chemical Distribution Institute portal |
+| **VIR** | Vessel ERP inspection module + email correspondence |
+| **CII** | [Emissions pipeline](/skills/emissions) — derived from noon reports + bunker records |
+
+### PSC regime portals
+
+| | MoU / Authority | Region |
+|---|---|---|
+| <img src="/images/brands/paris-mou.svg" alt="Paris MoU" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Paris MoU** | Europe + N. Atlantic |
+| <img src="/images/brands/tokyo-mou.svg" alt="Tokyo MoU" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Tokyo MoU** | Asia-Pacific |
+| <img src="/images/brands/indian-ocean-mou.svg" alt="Indian Ocean MoU" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Indian Ocean MoU** | Indian Ocean rim |
+| <img src="/images/brands/mediterranean-mou.svg" alt="Mediterranean MoU" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Mediterranean MoU** | Mediterranean basin |
+| <img src="/images/brands/caribbean-mou.svg" alt="Caribbean MoU" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Caribbean MoU** | Caribbean basin |
+| <img src="/images/brands/black-sea-mou.svg" alt="Black Sea MoU" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Black Sea MoU** | Black Sea region |
+| <img src="/images/brands/abuja-mou.svg" alt="Abuja MoU" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Abuja MoU** | West &amp; Central Africa |
+| <img src="/images/brands/uscg.svg" alt="USCG" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **US Coast Guard (USCG)** | United States |
+| <img src="/images/brands/riyadh-mou.svg" alt="Riyadh MoU" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Riyadh MoU** | Gulf states |
+
+---
+
+## Regime by regime
+
+### PSC
+
+The most operationally consequential regime. A PSC inspection produces deficiencies and (in severe cases) a detention. Every regime has its own MoU (Paris MoU, Tokyo MoU, Riyadh, AMSA, USCG, Latin American), each with a target factor that drives inspection probability per port call.
+
+The pipeline tracks:
+
+- Open PSC deficiencies (deficiency code, severity, action taken, ranking)
+- Detention history (when, where, what was the cause, how long held)
+- Repeat themes (same deficiency code appearing on multiple inspections)
+- Recent inspection density at the next port's regime
+- Crew / SMS deficiencies (often correlated to fatigue, training gaps)
+
+PSC severity vocabulary normalises to:
+
+| Source severity | Internal tier |
+|-----------------|---------------|
+| Detainable / Detention recommended | CRITICAL |
+| Major / Code 17, 30 (action required at next port) | HIGH |
+| Minor / Code 15 (rectify when feasible) | MEDIUM |
+
+### SIRE 2.0
+
+OCIMF's tanker vetting programme. SIRE 2.0 (the 2023 rewrite) replaced binary deficiency findings with a more nuanced observation severity scale:
+
+| SIRE 2.0 severity | Description |
+|-------------------|-------------|
+| Severity 1 | Minor — process or documentation gap |
+| Severity 2 | Moderate — operational concern |
+| Severity 3 | Major — significant operational risk |
+| Severity 4 | Critical — vessel may be rejected for charter |
+
+The pipeline pulls historical SIRE observations and the most recent inspection record, classifies findings by severity, and tracks operator response status — observations have a maximum response window after which the OCIMF system marks them outstanding.
+
+### CDI
+
+The chemical-tanker analogue to SIRE. Inspection produces ship and barge inspection reports (SIR / BIR). Same response-window logic; same observation severity tracking.
+
+The pipeline pulls the last-CDI details per vessel and tracks the inspection cycle.
+
+### VIR
+
+Charterer- and owner-led inspections. Variable severity vocabulary, normalised the same way as the [defects pipeline](/skills/defects). VIR findings often pre-empt SIRE / CDI findings — a charterer's inspector finds something today that the OCIMF inspector would have found at the next vetting if it weren't fixed first.
+
+### CII
+
+The carbon side. The [emissions data pipeline](/skills/cii-emissions-microapp-data) handles the data acquisition; the compliance pipeline tracks the rating trend:
+
+- Current attained vs required CII for the year
+- Year-over-year delta in attained
+- Projected end-of-year rating band (A / B / C / D / E)
+- Regulatory consequence: a vessel rated D for 3 consecutive years or E for 1 year requires a SEEMP III update with corrective measures
+
+A CII rating projecting E with 6 months of operating year remaining is a major commercial issue — the vessel may need operational changes (slow-steaming, route modification) or technical changes (engine retrofit) to bring the rating back.
+
+---
+
+## Cross-regime fleet view
+
+A fleet-wide compliance dashboard composes the per-vessel records:
+
+```text
+Vessel    Last PSC    Findings   Detention   Last SIRE    Sev 3+   Last CDI    CII Y-1   CII Y0   Verdict
+POSUN     Mar 2026    2 minor    No          Feb 2026     1        N/A         C         C        OK
+AQUILA    Jan 2026    5 mixed    No          Dec 2025     0        N/A         C         D        Watch
+OCEAN     Apr 2026    8 mixed    Yes (3d)    Mar 2026     2        N/A         D         E        Escalate
+NEXUS     Feb 2026    1 minor    No          Jan 2026     0        N/A         C         C        OK
+…
+```
+
+A reviewer scans the row to spot the structurally exposed vessels: OCEAN here has a recent detention, multiple SIRE Severity 3+ observations, and a CII trajectory dropping from D to E — three regimes pointing in the same direction.
+
+---
+
+## Detention-risk scoring
+
+A weighted composite combines four signals:
+
+$$
+R_\text{psc} = w_1 D_\text{open} + w_2 H_\text{detention} + w_3 R_\text{repeat} + w_4 S_\text{sms}
+$$
+
+| Signal | Description |
+|--------|-------------|
+| $D_\text{open}$ | Open PSC deficiencies in the next port's regime |
+| $H_\text{detention}$ | Detention-history recency multiplier (recent detention = higher) |
+| $R_\text{repeat}$ | Repeat-finding cluster count (same code, multiple inspections) |
+| $S_\text{sms}$ | Crew / SMS deficiency density (fatigue, training, SMS implementation) |
+
+The composite maps to LOW / MEDIUM / HIGH / CRITICAL. HIGH or CRITICAL routes the case to the Technical Superintendent with the contributing factors.
+
+---
+
+## Commercial-impact scoring
+
+A parallel score covers vetting and charterer exposure:
+
+$$
+R_\text{commercial} = w_1 N_\text{sire\_open} + w_2 N_\text{cdi\_open} + w_3 \mathbb{1}[\text{CII E projected}] + w_4 N_\text{vir\_open}
+$$
+
+A CII rating dropping to E carries a binary indicator weight because the regulatory consequence is binary.
+
+---
+
+## Investigation matrix
+
+When a finding lands, the pipeline classifies it through an investigation matrix:
+
+| Dimension | Categories |
+|-----------|------------|
+| **Root cause** | Technical, procedural, training, documentation |
+| **Recurrence** | First-time, repeat (same vessel), repeat (across fleet) |
+| **Commercial impact** | Vetting failure, off-hire risk, fuel-cost impact |
+| **Time to close** | Hours, days, weeks, months |
+
+A "training" root cause repeating across the fleet is a different conversation than a "technical" root cause on one vessel. The matrix exists so the response is calibrated to the actual problem.
+
+---
+
+## CII trajectory
+
+For the carbon dimension, the analyzer tracks attained CII through the operating year:
+
+$$
+\text{CII}_\text{attained}(t) = \frac{\sum_{i=1}^{t} \text{CO}_2_i}{\sum_{i=1}^{t} \text{Capacity} \cdot \text{Distance}_i}
+$$
+
+Compared against the IMO required CII for the year and the boundary lines for A–E ratings. A trajectory that's tracking the D/E boundary is flagged early so operational changes can intervene before the year closes.
+
+---
+
+## Worked example
+
+`MV OCEAN`, end-of-April compliance review:
+
+| Regime | Status | Verdict |
+|--------|--------|---------|
+| PSC | 8 open deficiencies (3 major, 5 minor); detention 3 days at Houston in March | HIGH |
+| SIRE 2.0 | 12 observations from Mar inspection; 2 Severity 3, response window closing in 8 days | HIGH |
+| CDI | N/A (not chemical tanker) | — |
+| VIR | 4 open from latest charterer inspection | MEDIUM |
+| CII | 2025 attained C, 2026 trajectory at D/E boundary, projected E if unchanged | CRITICAL |
+
+Repeat themes:
+
+- Crew familiarity finding in PSC (Houston) and SIRE (Houston, separate inspection) — same root cause, two regimes.
+- ECDIS update finding repeats across last two SIRE inspections — procedural gap not closed.
+
+**Verdict**: CRITICAL. Three regimes pointing in the same direction, projected CII E, recent detention, repeat themes.
+
+The pipeline:
+
+1. Routes the SIRE Severity 3 response to crewing — operator response due in 8 days, must not lapse.
+2. Routes the CII trajectory to the [voyage pipeline](/skills/voyage) for operational-change recommendation (slow-steaming candidate; route review).
+3. Generates a repeat-theme remediation plan covering crew familiarity training across the fleet, not just OCEAN.
+4. Flags ECDIS update procedure to QHSE for SMS revision.
+
+---
+
+## What the senior review contains
+
+1. **Headline** — overall compliance posture, detention-risk and commercial-impact scores.
+2. **PSC** — open deficiencies with severity, detention history, regime risk.
+3. **SIRE 2.0** — observation count by severity, response status, time to response window.
+4. **CDI** — last inspection findings, response status (where applicable).
+5. **VIR** — open observations, charterer / owner.
+6. **CII** — current and projected rating, year-over-year delta, SEEMP III implications.
+7. **Repeat themes** — findings appearing across regimes or inspections, with root-cause classification.
+8. **Recommendations** — prioritised by deadline and impact.
+9. **Escalation decision** — to whom, and why.
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Detention-risk score = HIGH or CRITICAL | CRITICAL |
+| Recent detention (under 12 months) | CRITICAL |
+| SIRE Severity 4 observation | CRITICAL |
+| Unresolved SIRE Severity 3 past response window | HIGH |
+| Projected CII rating E | HIGH |
+| Repeat finding across 3+ vessels in fleet (same code) | HIGH |
+| 3 consecutive years of D rating | CRITICAL |
+
+---
+
+## Why all five together
+
+A vessel with a clean SIRE record, a clean CII rating, but a fresh PSC detention is in trouble. A vessel with a clean PSC record but a CII trajectory falling off the cliff is also in trouble — different timeline, different audience. Reading the regimes together produces the only honest answer to "is this vessel commercially and operationally compliant?"
+
+<Tip>
+Repeat themes across regimes are the single highest-leverage finding the pipeline produces. A one-off finding can be dismissed; the same finding appearing in PSC and SIRE means the underlying issue is real and structural.
+</Tip>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Source templates" icon="code">
+    SIRE / CDI monitoring suite — historical SIRE observations, inspection records, last-CDI details, fleet-wide SIRE / CDI status.
+  </Card>
+  <Card title="Related: Class" icon="ship" href="/skills/class">
+    Class CoCs feed PSC detention probability — overlap with the class pipeline.
+  </Card>
+  <Card title="Related: Defects" icon="triangle-exclamation" href="/skills/defects">
+    PSC, SIRE, CDI, VIR findings live in both pipelines — defects gives the operational view.
+  </Card>
+  <Card title="Related: Emissions" icon="cloud" href="/skills/cii-emissions-microapp-data">
+    CII rating is computed from emissions data — that's where the numbers come from.
+  </Card>
+</CardGroup>

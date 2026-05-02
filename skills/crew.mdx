@@ -1,0 +1,258 @@
+---
+title: "Crew Surveillance"
+description: "Manning compliance, certificate validity, contract pressure, relief logistics and rest-hour exposure — the four constraints that decide whether a vessel can sail."
+---
+
+A vessel can be perfectly maintained, perfectly bunkered, and perfectly certified, and still not be allowed to sail. Crew is the binding constraint that catches everything else flat-footed.
+
+Four conditions must hold simultaneously:
+
+| Constraint | Failure mode |
+|------------|--------------|
+| **Minimum safe manning** | Rank slot empty or under-rank → vessel non-compliant |
+| **Certificate validity** | Officer's CoC / GMDSS / medical lapsed → cannot sail in role |
+| **Contract pressure** | Officer past contract end with no relief → MLC fatigue concern |
+| **Rest hours** | Sustained breach → SMS deficiency, PSC exposure |
+
+Pass any three and fail one — the vessel still doesn't sail. The pipeline tracks all four on a rolling basis and surfaces the constraint that's about to bite first.
+
+---
+
+## Where the data comes from
+
+| Source | What it provides |
+|--------|------------------|
+| **Vessel ERP (crewing module)** | Roster, ranks, sign-on dates, contract terms, nationalities |
+| **Crew certification register** | CoC, GMDSS, STCW endorsements, medical fitness, vaccination |
+| **Travel / visa coordination feed** | Relief logistics — visa lead-time, travel itineraries, quarantine requirements |
+| **Rest-hour records** | MLC 2.4 compliance entries (vessel-filed) |
+| **Minimum safe manning certificate** | Flag-issued, defines mandatory rank slots |
+
+Crew data spans the ERP plus the dedicated certification register. Travel and visa logistics typically come from a separate crewing-agency feed.
+
+---
+
+## Manning compliance
+
+The vessel's certificate of minimum safe manning lists exact rank-slot requirements:
+
+- 1 Master
+- 1 Chief Officer
+- 1 Second Officer
+- 1 Third Officer
+- 1 Chief Engineer
+- 1 Second Engineer
+- 1 Third Engineer
+- 1 Fourth Engineer
+- 1 Electrical Officer (where required)
+- N ratings (Bosun, ABs, OS, oilers, motorman, etc.)
+
+The pipeline cross-checks the current roster against the manning certificate. A rank-slot empty or filled by an under-ranked officer triggers a manning shortfall. Every shortfall is severity CRITICAL — a vessel sailing under-manned is both non-compliant and operationally fragile.
+
+---
+
+## Certificate validity
+
+Each officer carries a stack:
+
+- **Certificate of Competency (CoC)** — the rank licence, flag-issued
+- **GMDSS** — Global Maritime Distress &amp; Safety System (deck officers)
+- **STCW endorsements** — by vessel type (tanker, gas, chemical, polar)
+- **Medical fitness** — typically annual or biennial
+- **Vaccination records** — yellow fever, COVID, others depending on trade
+- **Travel documents** — passport, seamen's book, visas
+
+For each, the same expiry-window logic the [certificates pipeline](/skills/certificates) uses:
+
+$$
+\Delta_\text{days} = D_\text{expiry} - D_\text{today}
+$$
+
+| Window | Action |
+|--------|--------|
+| Already expired | Officer must not sail — escalate immediately |
+| 0–30 days | Renewal urgent — coordinate with crewing |
+| 31–90 days | Renewal in planning |
+| Beyond 90 days | Routine |
+
+Crew-certificate renewals are paperwork-bound — they take weeks of administration and depend on physical presence for medicals. A certificate at 30 days that hasn't started the renewal process is already late.
+
+---
+
+## Contract pressure
+
+Each officer has a contract length and a sign-on date. The contract end date is fixed; the relief is what has to happen on or before it.
+
+Officer state by contract:
+
+| State | Condition |
+|-------|-----------|
+| On contract | Sign-on date set, contract end in future, relief planned or being planned |
+| Approaching | Contract end within 30 days, relief plan should exist |
+| Over-contract (with relief plan) | Contract end past, relief logistics in motion |
+| Over-contract (no relief plan) | MLC fatigue concern — escalate |
+
+An officer over-contract by more than 30 days with no relief plan is the textbook MLC-fatigue exposure: the officer's contract has lapsed, the union may file, the flag may investigate, and the vessel's compliance posture deteriorates.
+
+---
+
+## Relief logistics
+
+Once a relief is planned, the logistics get specific:
+
+- **Visa** — does the joining officer have the destination-country visa, and how long does it take to obtain?
+- **Travel** — flights from the officer's home country to the join port; layovers and transit visas
+- **Quarantine** — destination-country quarantine if required
+- **Medical** — current and valid; if expired during travel, may not be allowed to board
+- **Crew change-friendly port** — not every port allows crew changes; the relief may need to be re-routed
+
+Each of these has a lead-time. The pipeline computes:
+
+$$
+T_\text{relief\_critical} = \max(t_\text{visa}, t_\text{travel}, t_\text{quarantine}, t_\text{medical})
+$$
+
+Compared against the time to the next crew-change-eligible port:
+
+$$
+\text{Slack} = T_\text{port} - T_\text{relief\_critical}
+$$
+
+Negative slack means the relief can't make the planned port — needs re-routing or earlier port stop.
+
+---
+
+## Rest hours — the MLC 2.4 view
+
+Maritime Labour Convention rest-hour requirements:
+
+$$
+H_\text{rest} \geq 10 \text{ h in any 24 h window}
+$$
+
+$$
+H_\text{rest} \geq 77 \text{ h in any 7-day window}
+$$
+
+The 24-hour rest may be split into a maximum of two periods, one of which must be at least 6 hours, with no more than 14 hours between consecutive rest periods.
+
+A breach is logged whenever an officer's rest record violates either constraint. Repeated breaches across a crew indicate fatigue risk and SMS-deficiency exposure during the next PSC inspection.
+
+The pipeline aggregates rest-hour breaches per officer per month and flags:
+
+| Pattern | Verdict |
+|---------|---------|
+| Single isolated breach | Acceptable noise |
+| Multiple breaches same officer | Workload distribution problem |
+| Multiple breaches across officers | Operational overload (heavy port-call window?) |
+| Sustained pattern across months | SMS deficiency — systemic |
+
+---
+
+## A roster snapshot on `MV POSUN`
+
+Mid-passage Singapore → Suez, end-of-April review:
+
+| Rank | Name | Sign-on | Contract end | Δ days | CoC valid | Medical valid | Status |
+|------|------|---------|--------------|-------:|-----------|----------------|--------|
+| Master | C. Patel | 2025-12-01 | 2026-06-01 | +30 | 2027-08 | 2026-12 | OK |
+| Chief Officer | M. Singh | 2025-11-12 | 2026-05-12 | +10 | 2027-04 | 2026-08 | Approaching — relief plan needed |
+| 2nd Officer | R. Kim | 2025-10-15 | 2026-04-15 | -16 | 2026-09 | 2026-06 | **Over-contract no relief plan** |
+| Chief Engineer | A. Joshi | 2025-12-20 | 2026-06-20 | +49 | 2028-03 | 2027-05 | OK |
+| 2nd Engineer | S. Tan | 2026-01-08 | 2026-07-08 | +67 | 2027-09 | **Expired 2026-04-01** | **Medical expired** |
+| 3rd Engineer | L. Wu | 2026-02-22 | 2026-08-22 | +112 | 2026-12 | 2027-01 | OK |
+
+Plus rest-hour summary: 12 breaches across 4 officers in April — Chief Officer 5, 2nd Officer 4, Chief Engineer 2, Bosun 1.
+
+**Verdict**: HIGH.
+
+- **2nd Engineer medical expired**: cannot remain in role — must be relieved at next port (Suez, 6 days).
+- **2nd Officer over-contract no relief**: MLC fatigue concern, must be escalated to crewing for immediate relief planning.
+- **Chief Officer approaching**: relief plan needed within 7 days.
+- **Rest-hour pattern**: Chief Officer 5 breaches points to workload distribution problem during the recent port-call window.
+
+The pipeline:
+
+1. Routes the 2nd Engineer medical to the Marine Superintendent — coordinates with crewing and port agent for Suez relief.
+2. Routes the 2nd Officer over-contract to crewing with the same urgency.
+3. Logs the rest-hour breaches for the next SMS audit.
+
+---
+
+## Implementation reference
+
+The relief-slack calculation, condensed:
+
+```python
+def relief_slack(officer, next_port, today):
+    """How much margin between when we need the relief and when we can have it."""
+    contract_end = officer["contract_end"]
+
+    # Critical-path lead time for the relief
+    lead_visa       = officer["replacement"]["visa_lead_days"]
+    lead_travel     = officer["replacement"]["travel_lead_days"]
+    lead_quarantine = officer["replacement"]["quarantine_days"]
+    lead_medical    = officer["replacement"]["medical_lead_days"]
+
+    relief_critical = max(lead_visa, lead_travel,
+                          lead_quarantine, lead_medical)
+
+    days_to_port    = (next_port["eta"] - today).days
+    days_to_contract = (contract_end - today).days
+
+    # Negative means we won't make it
+    return min(days_to_port, days_to_contract) - relief_critical
+```
+
+A negative slack triggers a relief-routing review — sometimes a relief that can't make Singapore can make Colombo a few days earlier.
+
+---
+
+## What the senior review contains
+
+1. **Manning status** — roster vs minimum safe manning, shortfalls flagged.
+2. **Certificate timeline** — every officer's certificates with expiry windows.
+3. **Contract pressure** — officers approaching, over-contract, with relief plan or without.
+4. **Relief logistics** — planned reliefs with critical-path lead-time and slack.
+5. **Rest-hour exposure** — breach count per officer and aggregate, fatigue-risk verdict.
+6. **Recommendations** — prioritised by sail date.
+7. **Escalation decision** — to whom, and why.
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Manning shortfall vs minimum safe manning | CRITICAL |
+| Officer certificate expired | CRITICAL |
+| Officer past contract more than 30 days with no relief planned | HIGH |
+| Sustained rest-hour breaches (3+ per officer per month) | HIGH |
+| Visa / travel blocking imminent relief | HIGH |
+| Fleet-wide pattern across multiple vessels | HIGH |
+
+---
+
+## Why crew is the binding constraint
+
+Engineering issues can usually be fixed with parts and time. Documentation issues can be fixed with paperwork. Crew issues hit a wall the moment the vessel reaches port — if the relief isn't there, the vessel doesn't sail. The pipeline runs continuously because a 30-day window can collapse to zero with one cancelled flight or one delayed visa.
+
+<Tip>
+The single highest-leverage data point in crew management is the relief plan. A vessel with every officer on contract and every certificate valid still has zero margin if no reliefs are planned for the upcoming contract end dates. The pipeline reports relief planning status as a first-class metric, not as a footnote.
+</Tip>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Related: Certificates" icon="file-certificate" href="/skills/certificates">
+    Vessel-side statutory certificates use the same expiry-window logic.
+  </Card>
+  <Card title="Related: Compliance" icon="scale-balanced" href="/skills/compliance-analyzer">
+    Crew / SMS deficiencies feed into PSC detention-risk scoring.
+  </Card>
+  <Card title="Related: Forms" icon="clipboard" href="/skills/forms">
+    Rest-hour records are filed as monthly forms — late filings break this pipeline.
+  </Card>
+</CardGroup>

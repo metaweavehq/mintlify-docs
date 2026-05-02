@@ -1,0 +1,186 @@
+---
+title: "IHM Surveillance"
+description: "Inventory of Hazardous Materials — IHM Part I/II/III, MMPL maintenance procedures, certificate status, outstanding tasks under EU SRR and Hong Kong Convention."
+---
+
+The Hong Kong Convention and the EU Ship Recycling Regulation require every applicable vessel to maintain an **Inventory of Hazardous Materials (IHM)** — a structured record of every hazardous substance on board, where it is, and how much. IHM Part I covers materials in the structure and equipment; Parts II and III cover operational waste and stores. The IHM is mandatory throughout the vessel's life and forms the basis of the Green Passport and the eventual Ready-for-Recycling Certificate.
+
+A vessel without a current IHM cannot be sold for recycling at an EU-listed yard. A vessel with a stale IHM is a dispute waiting to happen at the next port-state inspection. The **IHM Surveillance** pipeline keeps the inventory live, tracks the maintenance procedure (MMPL — Material Declaration Maintenance Procedure List), and surfaces the outstanding tasks the crew owes against the inventory.
+
+---
+
+## Where the data comes from
+
+| Source | What it provides |
+|--------|------------------|
+| **IHM dossier (vessel-side)** | The Part I/II/III inventory document and amendment history |
+| **Class-issued Statement of Compliance (SoC)** | Validity, annual endorsement status — from class portals (ABS, BV, DNV, LR, NK, CCS, KR, IRS, RINA) |
+| **Supplier MD / SDoC** | Material Declaration and Supplier Declaration of Conformity per equipment item |
+| **Vessel ERP equipment register** | Per-component installation / replacement history — drives outstanding-task detection |
+| **MMPL (vessel SMS)** | The Material Declaration Maintenance Procedure document |
+
+Suppliers owe the MD/SDoC at the time of equipment delivery. The pipeline cross-references the ERP equipment register against received MD/SDoC to surface gaps.
+
+---
+
+## What's tracked
+
+| Domain | Source |
+|--------|--------|
+| **IHM Part I** — structure and equipment | Original IHM dossier + amendments |
+| **IHM Part II** — operational waste | Operational records, log entries |
+| **IHM Part III** — stores | Stores inventory tagged with MD/SDoC |
+| **Certificates** | Statement of Compliance (SoC) issued by class society |
+| **MMPL** — Material Declaration maintenance procedure | Vessel SMS document |
+| **Outstanding tasks** | Open items per IHM updates |
+
+Four templates each handle a slice:
+
+| Template | Scope |
+|----------|-------|
+| **Certificates status** | SoC validity, expiry, issuing class |
+| **MMPL display** | Maintenance procedure document state |
+| **IHM Part I manual + updates** | Manual issuance dates, amendment history, downloadable links |
+| **Outstanding tasks** | Open items per vessel |
+
+---
+
+## Certificate status
+
+The Statement of Compliance under HKC / EU SRR has a 5-year validity with an annual endorsement. The pipeline tracks:
+
+$$
+\Delta_\text{days} = D_\text{SoC\_expiry} - D_\text{today}
+$$
+
+Verdict tier is the same as the [certificates pipeline](/skills/certificates):
+
+| Window | Action |
+|--------|--------|
+| Already expired | CRITICAL — cannot trade with EU |
+| 0–30 days | HIGH — renewal urgent |
+| 31–90 days | MEDIUM — coordinate survey |
+| 91–180 days | LOW — track |
+| > 180 days | OK |
+
+Plus the annual endorsement window — even a SoC valid for another 4 years requires the annual endorsement; missing the endorsement window invalidates the certificate.
+
+---
+
+## IHM Part I currency
+
+The IHM Part I dossier is not static. Every time hazardous-material-containing equipment is replaced, repaired, or added, the inventory must be updated with a new Material Declaration (MD) and Supplier Declaration of Conformity (SDoC). The Part I view tracks:
+
+- The current Part I version with issuance date
+- Amendment history with dates and content summary
+- Time since last amendment
+
+A vessel that hasn't had an IHM amendment in 18 months is either being maintained perfectly (unlikely) or hasn't been updated in the ERP (likely). The pipeline flags long quiet periods for review.
+
+---
+
+## Outstanding tasks
+
+The outstanding-tasks view lists every open IHM-related item:
+
+- Materials added to inventory but missing MD/SDoC
+- Equipment replaced without IHM update
+- MD/SDoC submitted but not yet validated by class
+- Annual review item not yet completed
+
+Each task has a deadline; overdue tasks combine into the IHM compliance score:
+
+$$
+\text{IHM compliance \%} = \frac{N_\text{tasks\_completed\_on\_time}}{N_\text{tasks\_in\_period}} \times 100
+$$
+
+A vessel below 90% on IHM compliance has a paper-trail gap that becomes a problem at the next class survey.
+
+---
+
+## MMPL — the procedural backbone
+
+The Material Declaration Maintenance Procedure List is the SMS document that tells the crew **how** to maintain the IHM. It defines:
+
+- Who is responsible (typically Chief Engineer + Chief Officer)
+- When updates are triggered (any equipment change, every annual review)
+- What evidence is required (MD, SDoC, photos, equipment register entries)
+- Where evidence is filed (vessel ERP + shore-side master IHM file)
+
+The MMPL view surfaces the current procedure document so the pipeline can verify procedure-vs-practice — a mismatch between what MMPL says and what the actual update history shows is itself a finding.
+
+---
+
+## Worked example
+
+`MV POSUN`, mid-April IHM review:
+
+| Item | Status | Notes |
+|------|--------|-------|
+| SoC under EU SRR | Valid until 2028-09-12 | OK |
+| Annual endorsement | Last 2026-01-15, next due 2027-01-15 | OK |
+| IHM Part I version | 4.2 (2025-08-30) | 7 months since last amendment |
+| Outstanding tasks | 3 open | 1 overdue: turbocharger replaced 2026-02 — no MD/SDoC filed |
+| MMPL | Latest revision 2025-04-10 | OK |
+| Compliance % | 87% | Below 90% threshold |
+
+The turbocharger replacement is the action item — replaced 2 months ago, no MD/SDoC has been filed against the IHM. The supplier should have provided the documentation; if they haven't, the chase is supplier-side. Until it's resolved, the IHM is incomplete and any class survey will surface the gap.
+
+The pipeline:
+
+1. Flags the missing turbocharger MD/SDoC to the Marine Superintendent.
+2. Generates a follow-up email to the supplier (via the [outlook pipeline](/skills/outlook-email-sync)).
+3. Schedules a re-check in 14 days.
+
+---
+
+## What the senior review contains
+
+1. **SoC status** — current validity, annual endorsement date, days remaining.
+2. **IHM Part I currency** — current version, last amendment, time since last update.
+3. **Outstanding tasks** — open items with deadlines, overdue list at top.
+4. **MMPL status** — current revision, compliance against procedure.
+5. **Compliance %** — period-over-period trend.
+6. **Recommendations** — prioritised by SoC and survey timeline.
+7. **Escalation decision** — to whom, and why.
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| SoC expired or annual endorsement missed | CRITICAL |
+| Outstanding task overdue beyond 60 days | HIGH |
+| Equipment change without MD/SDoC for &gt; 90 days | HIGH |
+| Compliance % below 80% | HIGH |
+| MMPL not revised in &gt; 24 months | MEDIUM |
+
+---
+
+## Why this is its own pipeline
+
+IHM is structurally different from the other compliance regimes. The data lives mostly in equipment-register entries and supplier-supplied paperwork; the deadlines are class- and flag-driven; the consequences only fully crystallise at end-of-life sale. A vessel can ignore IHM for years and look fine — until it's time to recycle, at which point the gap is unrecoverable. The pipeline forces continuous attention on a regime that otherwise quietly decays.
+
+<Note>
+The single biggest preventable IHM gap most fleets carry is missing supplier MD/SDoC for equipment replaced in service. The supplier owes the documentation; if it isn't filed at the time of replacement, the gap propagates indefinitely. The pipeline cross-references the [PMS pipeline](/skills/pms) for completed major-component replacements without matching IHM updates.
+</Note>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Templates: ihm-inventory" icon="code">
+    IHM-inventory suite — certificates status, MMPL display, IHM Part I manual with updates, and outstanding tasks.
+  </Card>
+  <Card title="Related: Certificates" icon="file-certificate" href="/skills/certificates">
+    SoC under HKC / EU SRR is tracked in the certificate pipeline as well — same expiry window logic.
+  </Card>
+  <Card title="Related: PMS" icon="wrench" href="/skills/pms">
+    Equipment replacements logged in PMS should trigger IHM updates — cross-reference catches the gaps.
+  </Card>
+  <Card title="Related: Procurement" icon="cart-shopping" href="/skills/purchase">
+    Suppliers of new equipment should provide MD/SDoC at delivery — procurement is the upstream point.
+  </Card>
+</CardGroup>

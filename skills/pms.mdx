@@ -1,0 +1,242 @@
+---
+title: "Planned Maintenance Surveillance"
+description: "Counter-driven maintenance compliance — overdue job ranking, machinery-family rollups, and the maintenance-debt index that tells a TSI which vessel needs attention this week."
+---
+
+The Planned Maintenance System produces something deceptively simple: a list of jobs, with due dates. The work is interpreting that list. A vessel with 200 overdue routine jobs is in better shape than a vessel with 5 overdue critical-machinery jobs. A vessel with falling closure rate and steady open count is heading toward the first state. The pipeline below scores all of that and produces the one number a Technical Superintendent actually needs: where this vessel ranks against the rest of the fleet.
+
+## Where the data comes from
+
+| Source | What it provides |
+|--------|------------------|
+| **Vessel ERP (PMS module)** | Job register, due dates, completion records, criticality tags |
+| **Engine running-hours feed** | Counter readings — drives counter-based job due dates |
+| **PMS counter forms (vessel-side)** | Manual counter updation when telemetry isn't available |
+| **Critical spares inventory (ERP)** | Stock vs minimum levels — feeds the compliance snapshot |
+
+PMS data lives entirely in the ERP. The pipeline reads job records and reconciles counter freshness against engine running-hours from the noon-report stream — discrepancies between the two surface as counter-updation gaps.
+
+---
+
+## How PMS jobs are tracked
+
+Maintenance jobs come in two flavours:
+
+| Job type | Trigger | Due-date driver |
+|----------|---------|-----------------|
+| **Counter-based** | Engine running hours, generator hours, compressor cycles | $H_\text{job} - H_\text{current}$ |
+| **Calendar-based** | Wall-clock interval (monthly, quarterly, annual) | $D_\text{due} - D_\text{today}$ |
+
+The pipeline handles both with the same threshold logic but reports them separately, because a vessel idle in port might not be falling behind on counter-based jobs even if the calendar says it should be.
+
+### Counter-based overdue
+
+For an engine running 18 hours a day, every day matters:
+
+$$
+\text{Overdue Hours} = H_\text{current} - H_\text{job\_due}
+$$
+
+When negative, the job is still ahead of schedule. When positive, the job is overdue by that many running hours — convert to days at the vessel's average running profile to get the operational pressure.
+
+### Calendar-based overdue
+
+$$
+\Delta_\text{days} = D_\text{job\_due} - D_\text{today}
+$$
+
+| $\Delta_\text{days}$ | Status |
+|----------------------|--------|
+| $\leq 0$ | Overdue |
+| $0$ to $30$ | Due Soon |
+| $> 30$ | In Order |
+
+---
+
+## The four major-machinery rollups
+
+The PMS surveillance produces five views the reviewer reads in order. Four of them are major-machinery rollups, each computed identically but on a different equipment family:
+
+<Tabs>
+  <Tab title="Main Engine">
+    The most expensive equipment to defer maintenance on. Job cycle times are long (top-ends, mid-life, major overhauls). A delayed cylinder overhaul shows up as cylinder asymmetry on the [ME performance review](/skills/me-performance) before it shows up as engine failure.
+  </Tab>
+  <Tab title="Auxiliary Engines">
+    Each AE is reported separately — when one is in maintenance, the redundancy tier of the rest of the fleet matters. Cross-reference the [AE performance review](/skills/ae-performance) for blackout-risk implications.
+  </Tab>
+  <Tab title="Purifiers">
+    Fuel and lube-oil purifiers run continuously and accumulate counter hours fast. A neglected purifier is the most common upstream cause of cat-fine ingress and lube-oil contamination.
+  </Tab>
+  <Tab title="Compressors">
+    Air compressors are critical — emergency starts, pneumatic systems, and air-driven safety equipment all depend on them. Compressor PMS lapses tend to be invisible until something fails to start.
+  </Tab>
+</Tabs>
+
+Each rollup produces the same shape of output:
+
+| Code | Title | Equipment | Due Hours | Current Hours | Overdue Hours |
+|------|-------|-----------|-----------|---------------|---------------|
+| ME-CYL-OH | Cylinder overhaul | ME Cyl 5 | 24,000 | 24,820 | 820 |
+| ME-FUEL-INJ | Fuel injector replacement | ME Cyl 3 | 8,000 | 8,180 | 180 |
+| ME-TC-WASH | Turbocharger water-wash | ME T/C | 1,500 | 1,420 | — |
+
+The major-machinery rollup templates emit precisely this shape, with the job code rendered as a hyperlink to the ERP record:
+
+```python
+def add_jobcode_links(df):
+    df["jobCode"] = df.apply(
+        lambda x: (
+            f"<a href=\"{x['link']}\" target=\"_blank\">{x['jobCode']}</a>"
+            if pd.notna(x["link"]) and x["link"] != ""
+            else x["jobCode"]
+        ),
+        axis=1,
+    )
+    return df
+
+def filter_and_rename_columns(df):
+    df = df[["jobCode", "jobTitle", "component",
+             "jobDueCounter", "currentCounter", "overdue", "imo"]].rename(
+        columns={
+            "jobCode": "Code", "jobTitle": "Title", "component": "Equipment",
+            "jobDueCounter": "Due Hours", "currentCounter": "Current Hours",
+            "overdue": "Overdue Hours",
+        }
+    )
+    return df
+```
+
+The fifth view is the **all-machinery overdue summary**, which deliberately filters to the four major families above — because that's where deferred maintenance becomes safety risk.
+
+---
+
+## The maintenance-debt index
+
+Every vessel gets a single composite score that ranks it against the rest of the fleet. The index combines four signals:
+
+| Signal | Weight |
+|--------|--------|
+| Open critical jobs | 5 |
+| Open major jobs | 2 |
+| Open routine jobs | 1 |
+| Chronic overrun (3+ periods on same job) | +3 multiplier |
+
+$$
+\text{Debt index} = 5 \cdot N_\text{critical} + 2 \cdot N_\text{major} + 1 \cdot N_\text{routine} + 3 \cdot N_\text{chronic}
+$$
+
+The index is reported alongside the period-on-period delta:
+
+- **Index falling** — maintenance team is closing faster than opening; the vessel is recovering
+- **Index stable** — steady state; closure rate matches arrival rate
+- **Index rising** — drift; closure rate is below arrival rate, and the gap will compound
+
+Two weeks of "rising" is enough to escalate even if the absolute index is below the fleet median — direction matters as much as magnitude.
+
+---
+
+## Compliance snapshot — the PMS Summary view
+
+Beyond the jobs themselves, the PMS Summary template assembles five compliance views into one document:
+
+<Steps>
+  <Step title="Maintenance jobs">
+    Open and overdue jobs by criticality and machinery family. Same shape as the rollups above, but at the vessel level.
+  </Step>
+  <Step title="Certificates">
+    Certificates expired or about to expire — cross-references the [class pipeline](/skills/class) so a class-certificate gap and a PMS gap show up in the same brief.
+  </Step>
+  <Step title="Critical spares">
+    Spares marked critical with current quantity below minimum level. A critical-spares stockout is a future maintenance overrun the vessel doesn't know about yet.
+  </Step>
+  <Step title="Machinery defects">
+    Open defects on the main and auxiliary engine families — cross-references the [defects pipeline](/skills/defects) for severity and age.
+  </Step>
+  <Step title="Counter updation">
+    Whether the vessel has been updating engine counters at the expected cadence. Stale counters means the entire counter-based PMS view is unreliable, which is itself a compliance issue.
+  </Step>
+</Steps>
+
+A reviewer reading the Summary sees all five at once. A vessel can pass any one of them and still fail the review — the Summary is graded on the worst of the five, not the average.
+
+---
+
+## Vessel-level compliance percentage
+
+For the headline number on the dashboard:
+
+$$
+\text{Compliance \%} = \frac{N_\text{jobs completed on schedule}}{N_\text{mandatory jobs in period}} \times 100
+$$
+
+Threshold: below 90% is flagged. Below 80% triggers escalation regardless of the criticality breakdown — at that point the maintenance system itself is the issue.
+
+---
+
+## A real fleet snapshot
+
+A weekly run across a 14-vessel fleet produces something like:
+
+| Vessel | Compliance % | Debt index | Trend | Critical open | Verdict |
+|--------|-------------:|-----------:|:------|--------------:|---------|
+| POSUN | 96.4% | 31 | ↘ | 1 | OK |
+| AQUILA | 91.2% | 67 | → | 3 | Monitor |
+| OCEAN | 88.7% | 124 | ↗ | 6 | Escalate |
+| NEXUS | 94.1% | 22 | ↘ | 0 | OK |
+| … | … | … | … | … | … |
+
+The reviewer's first action is on OCEAN — falling compliance, rising debt index, six critical jobs open. Two of the three vessels above 90% are healthy; AQUILA is the borderline case. The pipeline routes OCEAN to TSI automatically and flags AQUILA for next-week revisit.
+
+---
+
+## What the senior review contains
+
+1. **Headline** — compliance %, debt index, fleet rank.
+2. **Major-machinery rollups** — Main Engine, AEs (per engine), Purifiers, Compressors.
+3. **Overdue summary** — across all machinery, ranked by criticality-weighted age.
+4. **Compliance snapshot** — the five PMS Summary views, with the worst of them highlighted.
+5. **Debt-index trend** — period-on-period chart with the verdict (falling / stable / rising).
+6. **Recommendations** — focused on the chronic overruns and the systemic gaps, not the individual late jobs.
+7. **Escalation decision** — to whom, and why.
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Any CRITICAL job overdue | CRITICAL |
+| Compliance below 80% | HIGH |
+| Chronic overrun (3+ periods) on any safety-critical job | CRITICAL |
+| Equipment cluster (3+ jobs same major-machinery family) | HIGH |
+| Class item overdue past deadline | CRITICAL |
+| Counter updation lapse (stale counters > 14 days) | HIGH |
+
+---
+
+## A note on counter discipline
+
+The single biggest data-integrity risk in PMS is stale counters. If the engineers haven't updated the engine running hours in the ERP for two weeks, every counter-based due-hours calculation is wrong by however many hours the engine actually ran. The pipeline checks counter freshness against noon-report engine running hours and flags discrepancies — usually the noon report is right and the ERP is behind.
+
+<Tip>
+The fastest way to improve PMS compliance numbers is to fix counter updation. Half of "overdue" jobs on a stale-counter vessel are not actually overdue — they just look that way because the ERP thinks the engine has run more hours than it actually has.
+</Tip>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Templates: pms-maintenance" icon="code">
+    PMS-maintenance suite — major-machinery rollups (Main Engine, Aux Engine, Purifier, Compressor), all-machinery overdue summary, PMS compliance summary, and supporting views (saturday LSA / FFA, machinery details, vessel particulars).
+  </Card>
+  <Card title="Related: Defects" icon="triangle-exclamation" href="/skills/defects">
+    PMS overruns and defects often share equipment families — cross-referencing finds the systemic issues.
+  </Card>
+  <Card title="Related: ME / AE performance" icon="ship">
+    Cylinder asymmetry usually appears before the corresponding cylinder overhaul is officially overdue.
+  </Card>
+  <Card title="Related: Class" icon="ship" href="/skills/class">
+    Class CMS items are PMS items with class consequences if missed.
+  </Card>
+</CardGroup>

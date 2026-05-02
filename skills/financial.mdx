@@ -1,0 +1,274 @@
+---
+title: "Vessel Financial Surveillance"
+description: "Budget vs actual with pro-rata accounting, year-end forecasting, fund-balance tracking, and category-level cost-driver attribution."
+---
+
+A vessel's annual budget is a number on a spreadsheet until you start spending it. Once spending starts, the question is no longer "what's the budget" but "are we tracking, and if not, where is the variance coming from, and will it close out the year over plan?"
+
+Three numbers run a fleet's finance team:
+
+| Number | What it answers |
+|--------|------------------|
+| **YTD variance** | Are we currently over or under against where we should be? |
+| **Year-end forecast** | If nothing changes, where do we close out the year? |
+| **NB fund balance** | Is there cash to keep operating? |
+
+The **Vessel Financial Surveillance** pipeline computes all three on a rolling basis, drills down to the cost categories driving the variance, and surfaces the fund-balance position so a Technical Superintendent can act on the operational levers without waiting for the month-end close.
+
+---
+
+## Where the data comes from
+
+| Source | What it provides |
+|--------|------------------|
+| **Vessel ERP (finance / accounting module)** | Budget allocations, transactions, vendor invoices, fund balances |
+| **ERP procurement module** | PO-driven expense linkage — every transaction traces to a PO |
+| **Bank reconciliation feed** | Receipts (NB fund contributions) and payments |
+| **FX rate reference** | Multi-currency normalisation |
+| **Drydock plan** | Triggers the step-function pro-rata for DD-tagged spend |
+
+Financial data is entirely ERP-internal. The pipeline reads transactions, normalises currency, applies the pro-rata profile per category, and produces variance / forecast / fund-balance views. No external data source is required.
+
+---
+
+## The categories
+
+Every vessel expense rolls up under one of these:
+
+- **OPEX** — operating expenditure (the largest bucket)
+- **NB** — newbuilding fund (capital reserve for newbuild contributions)
+- **DD** — drydock fund (reserve for upcoming drydocks)
+- **PD** — periodic drydock provision
+
+Within OPEX, expenses are tagged by category: **Stores**, **Lube Oil**, **Deck**, **Engine**, **Crew**, **Victualling**, **Repairs**, **Port Disbursements**, **Insurance**, **Survey**, etc.
+
+The pipeline runs the same variance and forecast maths on every category — what's interesting is which category is drifting, not the aggregate.
+
+---
+
+## Pro-rata: the trick everyone gets wrong
+
+A vessel's annual budget is rarely spent at $\frac{1}{12}$ per month. Drydocks land in a single month; surveys cluster around certificate cycles; lube-oil bunkering happens at port calls. Comparing month-to-date spend against $\frac{1}{12}$ of the annual budget produces nonsense.
+
+The pipeline handles this with **pro-rata adjustment** — the budget allocation up to today's date based on a category-aware time profile rather than calendar time:
+
+$$
+B_\text{prorata}(t) = B_\text{annual} \cdot f_\text{category}(t)
+$$
+
+where $f_\text{category}(t)$ is the cumulative fraction of the annual budget that's *expected* to have been spent by time $t$. Categories like Crew use $f(t) = \frac{t}{T}$ (linear); categories like Drydock use a step function around the planned drydock month.
+
+Variance is then computed against the pro-rata budget, not against the calendar fraction:
+
+$$
+\text{Variance}_\text{prorata} = \text{Actual}_\text{YTD} - B_\text{prorata}(t)
+$$
+
+A vessel that's "10% over annual budget" looks alarming until you realise its drydock landed in March and pro-rata accounting shows it's actually within 2% of the expected curve.
+
+The implementation is the most complex code in the budget templates:
+
+```python
+def prorata_calculation(row, env):
+    """Compute the pro-rata budget for a row given category and current period."""
+    category    = row["category"]
+    period_end  = row["period_end_date"]
+    annual_bud  = row["annualBudget"]
+    today       = datetime.utcnow() if env != "test" else datetime(2025, 11, 20)
+
+    # Choose the time profile by category
+    profile = CATEGORY_PROFILES.get(category, "linear")
+    if profile == "linear":
+        elapsed = (today - row["budget_start_date"]).days
+        total   = (period_end - row["budget_start_date"]).days
+        fraction = elapsed / total
+    elif profile == "drydock":
+        # Step function — full allocation lands in planned drydock month
+        fraction = 1.0 if today >= row["drydock_month"] else 0.0
+    elif profile == "lubeoil_quarterly":
+        # Quarterly lumps tied to typical bunker calls
+        fraction = quarterly_fraction(today, row["budget_start_date"])
+    else:
+        fraction = elapsed / total
+
+    return annual_bud * fraction
+```
+
+The reviewer doesn't see the pro-rata calculation directly. They see one number: variance against the expected curve.
+
+---
+
+## Year-end forecasting
+
+Variance answers "where are we now". The TSI's question is "where will we be in December". Forecast logic:
+
+$$
+\text{Forecast}_\text{YE} = \text{Actual}_\text{YTD} + \dot{B}_\text{recent} \times M_\text{remaining}
+$$
+
+where $\dot{B}_\text{recent}$ is the burn rate over the last 3 months, and $M_\text{remaining}$ is the months until budget year-end.
+
+Forecast verdict:
+
+| Forecast vs annual budget | Tier |
+|----------------------------|------|
+| $\leq +5\%$ | On track |
+| $+5\%$ to $+10\%$ | Watch |
+| $+10\%$ to $+25\%$ | Over — escalate |
+| $> +25\%$ | Critical — re-forecast required |
+
+Same logic on the under side: a vessel forecasting -15% under budget often means deferred maintenance that's storing up future cost, not actual savings.
+
+---
+
+## Cost-driver attribution
+
+When a category is over budget, the analyzer ranks the underlying transactions:
+
+```text
+LUBE OIL  — Annual budget $84,000  ·  YTD pro-rata $42,000  ·  Actual $58,400  ·  Variance +$16,400 (+39%)
+
+Top drivers:
+   1. PO LUB-2026-04-118  Singapore bunker         $12,200
+   2. PO LUB-2026-02-073  Cylinder oil x 4 drums    $4,800
+   3. PO LUB-2026-03-091  System oil top-up         $1,200
+```
+
+The driver list is what makes the variance actionable. "Lube oil over by $16k" can be a budgeting error, a price spike, a one-off bunker, or systematic overconsumption. The driver list collapses that to "Singapore bunker drove most of it" — which routes to the [fuel oil pipeline](/skills/fuel-oil) for price-vs-spec investigation, or to [lube oil](/skills/lube-oil) for a consumption check.
+
+---
+
+## NB fund balance
+
+The newbuilding fund is a separate ledger from OPEX. It accumulates owner contributions and pays out for newbuild commitments. The fund-status view tracks:
+
+| Component | Description |
+|-----------|-------------|
+| Opening balance | Carried over from prior period |
+| Receipts | New contributions in period |
+| Expenses | NB-tagged expenses in period |
+| Closing balance | $= \text{Opening} + \text{Receipts} - \text{Expenses}$ |
+
+A vessel with NB fund running negative is a cash issue, not a budget issue — and it's usually visible weeks before it would show up in a month-end close.
+
+---
+
+## Per-day OPEX
+
+The daily-spend view answers "what does this vessel cost per operating day?":
+
+$$
+\text{Per-day OPEX} = \frac{\text{OPEX}_\text{YTD}}{\text{Operating days YTD}}
+$$
+
+Comparable across vessels of the same type. A vessel running $4,200/day OPEX where the fleet median for that vessel type is $3,600/day is structurally more expensive — usually a sign of older equipment, higher repair burden, or longer port stays.
+
+---
+
+## The five tables a reviewer reads
+
+The Committed Cost Summary view assembles the headline as five AG-grid tables:
+
+<AccordionGroup>
+  <Accordion title="OPEX Current Month" icon="calendar-day">
+    Spend in the current month vs the pro-rata monthly budget. The most-recent-data view.
+  </Accordion>
+  <Accordion title="OPEX Previous Month" icon="calendar-days">
+    Closed prior month for trend comparison. The "what just happened" view.
+  </Accordion>
+  <Accordion title="NB (Newbuilding fund)" icon="hammer">
+    Fund balance with opening, receipts, expenses, closing.
+  </Accordion>
+  <Accordion title="DD (Drydock fund)" icon="anchor">
+    Drydock reserve status — accumulating or drawn down — against planned drydock cost.
+  </Accordion>
+  <Accordion title="PD (Periodic drydock)" icon="calendar-check">
+    Periodic drydock provision tracking.
+  </Accordion>
+</AccordionGroup>
+
+A reviewer who sees all five together can spot an OPEX overrun being absorbed by an underfunded DD reserve — a problem that wouldn't be visible in any single view.
+
+---
+
+## Worked example
+
+`MV POSUN`, 2026 budget year, reviewed at end of April:
+
+| View | Number | Verdict |
+|------|--------|---------|
+| OPEX YTD pro-rata variance | +$48,300 (+8.4%) | Watch |
+| Year-end forecast | +$112,000 (+11.7%) | Over — escalate |
+| Top variance driver | Lube Oil +$16,400 (Singapore bunker April-12) | — |
+| Second driver | Repairs +$22,800 (turbocharger overhaul March) | — |
+| Third driver | Stores +$9,100 (consumables uptick) | — |
+| NB fund closing | $1.2M positive | Healthy |
+| DD fund vs planned | $340k vs $850k planned | Underfunded — owner attention |
+| Per-day OPEX | $4,150 | $50 over fleet median |
+
+**Verdict**: HIGH on the year-end forecast — projecting +12%, primarily driven by repairs (turbocharger overhaul cost ran higher than budgeted) and the Singapore bunker outlier.
+
+The pipeline:
+
+1. Routes the year-end forecast to the Technical Superintendent.
+2. Routes the DD funding gap to the owner / commercial side.
+3. Cross-references the Singapore bunker driver to [fuel oil](/skills/fuel-oil) — was the bunker premium-priced or was the quantity higher than usual?
+4. Suggests a re-forecast for Q3 if the repair line continues at the current trajectory.
+
+---
+
+## Variance signals
+
+Different variance shapes mean different things:
+
+| Pattern | Likely cause |
+|---------|--------------|
+| Single-month spike, returns to baseline | One-off event (drydock, bunker, repair) — re-baseline next period |
+| Rising trend across 3+ months | Structural — price inflation, equipment aging, over-consumption |
+| Stable variance, growing absolute number | Volume — more vessel days, more activity |
+| Falling variance | Recovery or under-spend (check for deferred work) |
+
+The pipeline classifies the variance shape and adds it to the verdict so a TSI knows whether they're chasing an event or a trend.
+
+---
+
+## When the pipeline escalates
+
+| Trigger | Severity |
+|---------|----------|
+| Year-end forecast breach &gt;25% | CRITICAL |
+| Year-end forecast breach &gt;10% | HIGH |
+| NB fund balance turning negative | CRITICAL |
+| DD fund underfunded vs planned drydock with &lt;90 days | HIGH |
+| Single category overspend &gt;25% | HIGH |
+| Rising variance trend across 3+ months in any category | HIGH |
+| Unbudgeted spend on safety-critical items | CRITICAL |
+
+---
+
+## Why it works as a pipeline
+
+A monthly close is too late for variance to be actionable — the bunker has been delivered, the drydock has been booked, the spare has been ordered. The pipeline runs daily on the most recent data, applies the pro-rata curve, and produces a forecast that updates every time a transaction posts. The Technical Superintendent sees drift before it compounds.
+
+<Tip>
+The most valuable single number on a financial review is the **forecast delta vs last review**. A forecast that improved by $20k between this week and last is a signal the operational team is responding; a forecast that worsened by $20k means the assumptions in last week's plan were wrong.
+</Tip>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Source templates" icon="code">
+    Budget-management suite — committed cost summary, budget vs expense with pro-rata, current and previous-year transactions, previous-year analysis, and the overall fund status &amp; variance report.
+  </Card>
+  <Card title="Related: Procurement" icon="cart-shopping" href="/skills/purchase">
+    Variance drivers are usually procurement events — same numbers, operational frame.
+  </Card>
+  <Card title="Related: Fuel oil" icon="gas-pump" href="/skills/fuel-oil">
+    Bunker price + quantity drives a large share of OPEX variance.
+  </Card>
+  <Card title="Related: PMS" icon="wrench" href="/skills/pms">
+    Repair line variance often traces back to overdue maintenance becoming reactive maintenance.
+  </Card>
+</CardGroup>

@@ -1,0 +1,210 @@
+---
+title: "Certificate Surveillance"
+description: "Statutory and trade certificate portfolio tracking — expiry windows, authority gaps, renewal lead-time, and PSC detention-risk scoring."
+---
+
+<Frame caption="Certificate Surveillance — flag, statutory, and trade certificates tracked from authority sources through expiry classification to PSC detention-risk scoring.">
+  <img src="/images/hero/certificate-surveillance-whitepaper.png" alt="Certificate Surveillance pipeline showing flag administration and class portals, certificate inventory, expiry-window classifier, and PSC detention-risk verdict" style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
+</Frame>
+
+The class pipeline handles class certificates. Everything else — flag-issued statutory certificates, trade-specific certificates, crew-related vessel-side certificates — belongs here. A vessel detained at PSC because a flag-issued certificate expired three weeks ago is the most preventable kind of detention there is.
+
+Certificates rarely fail in interesting ways. They expire. The work is structural: making sure every certificate is being tracked, every expiry window is being watched, every renewal has lead-time, and the rare flag-specific edge case (Panama BWMC full-term, etc.) doesn't trigger a false-positive overdue.
+
+---
+
+## Where the data comes from
+
+| Source | What it provides |
+|--------|------------------|
+| **Flag administration portals** | Statutory certificate validity, dispensations, endorsements |
+| **Class portals (ABS, BV, DNV, LR, NK, CCS, KR, IRS, RINA)** | Class-issued statutory certificates and SoCs |
+| **Vessel ERP (certificates module)** | Master register, scanned PDFs, renewal-coordination notes |
+| **Insurance broker correspondence** | P&amp;I and H&amp;M certificates of entry |
+| **Recognised Organisation (RO) database** | Authorisation status per flag |
+
+Each flag and class society publishes certificates differently — some via portal, some via PDF email. The pipeline normalises every source into the same record shape.
+
+---
+
+## The portfolio
+
+A typical vessel carries 30–50 certificates beyond the class set:
+
+- **Statutory certificates** — flag-issued under SOLAS, MARPOL, MLC, ISM, ISPS, BWM, IHM
+- **Trade-specific** — IOPP, ISPP, SOPEP, GAS Code, Chemical Code, Polar Code (where relevant)
+- **Vessel registration** — registry certificate, continuous synopsis record
+- **Insurance** — P&amp;I, H&amp;M (typically renewed annually)
+- **Wireless / radio** — cargo ship safety radio
+- **Operational** — minimum safe manning, fitness certificates aggregate
+
+Each certificate has an issue date, an expiry date, sometimes an extension date (administrative or flag-issued), and an issuing authority.
+
+---
+
+## How a verdict is produced
+
+### Effective expiry
+
+Same logic the [class pipeline](/skills/class) uses for class certificates:
+
+$$
+D_\text{effective} = \max(D_\text{expiry}, \; D_\text{extension})
+$$
+
+Days remaining drives the verdict:
+
+$$
+\Delta_\text{days} = D_\text{effective} - D_\text{today}
+$$
+
+### Window classification
+
+| Window | Bucket | Action |
+|--------|--------|--------|
+| Already expired | CRITICAL | Vessel non-compliant — escalate immediately |
+| 0–30 days | HIGH | Renewal urgent |
+| 31–90 days | MEDIUM | Renewal in planning |
+| 91–180 days | LOW | Track |
+| Beyond 180 days | OK | Routine |
+
+### Flag-specific overrides
+
+Some flags issue full-term certificates that supersede class-issued versions for specific instruments. The most common case is Panama issuing full-term BWMC, IHM, ISSC, or security certificates — these read as expired in the class portal but are administratively in order.
+
+The pipeline applies the same flag-aware logic the class pipeline uses:
+
+```python
+if days_diff <= 0:
+    name = cert.get("certificateName", "").lower()
+    if any(t in name for t in ("ballast", "bwm", "hazardous", "ihm",
+                                "security", "issc")) and "panama" in vessel_flag:
+        verdict = "Full term certificate — flag-issued"
+        severity = None     # Not overdue
+    else:
+        verdict = "Overdue"
+        severity = "CRITICAL"
+```
+
+Without the override, a Panama-flagged vessel with a fully flag-issued BWMC produces a false-positive overdue verdict every review cycle. The override eliminates the noise.
+
+---
+
+## Detention-risk scoring
+
+A composite weighted by certificate type and window urgency:
+
+$$
+R_\text{psc} = \sum_i \left( w_\text{type}(c_i) \cdot w_\text{window}(c_i) \right)
+$$
+
+Type weights reflect that not all certificates carry equal PSC detention risk:
+
+| Certificate type | Weight |
+|------------------|-------:|
+| Statutory (SOLAS / MARPOL / MLC / IOPP) | 5 |
+| Class (Hull / Machinery / Cargo Ship Safety) | 4 |
+| Trade-specific (BWMC / IHM / ISSC) | 3 |
+| Insurance (P&amp;I / H&amp;M) | 2 |
+| Other (registry / wireless / etc.) | 1 |
+
+Long-lead-survey renewals get an additional multiplier — they can't be rushed at the next port call. The composite maps to LOW / MEDIUM / HIGH / CRITICAL.
+
+---
+
+## Renewal lead-time
+
+For each certificate due within the next 180 days, the pipeline computes the renewal critical path:
+
+1. Survey requirement (in-port vs underway)
+2. Surveyor availability at the planned port
+3. Document preparation lead-time
+4. Flag administration processing time
+
+A renewal that needs 21 days lead-time but the vessel reaches the next port in 14 has a problem. The pipeline surfaces these timing gaps so a Marine Superintendent can intervene before the certificate window closes.
+
+---
+
+## Worked example
+
+`MV POSUN`, Panama-flagged, mid-April review:
+
+| Certificate | Expiry | Δ days | Verdict |
+|-------------|--------|-------:|---------|
+| Cargo Ship Safety Construction | 2026-09-12 | 134 | OK |
+| Cargo Ship Safety Equipment | 2026-06-04 | 35 | MEDIUM |
+| MARPOL Annex VI / IAPP | 2026-05-21 | 21 | HIGH |
+| BWMC | 2026-04-08 | -7 | Full term — flag-issued (override) |
+| MLC | 2026-08-30 | 121 | LOW |
+| P&amp;I | 2027-02-20 | 295 | OK |
+| Continuous Synopsis Record | 2026-12-01 | 214 | OK |
+
+**Detention-risk score**: MEDIUM — driven by the IAPP renewal in 21 days. A surveyor is required and the vessel is currently mid-passage, due Singapore in 11 days. Lead-time tight but feasible.
+
+The pipeline:
+
+1. Routes the IAPP renewal to the Marine Superintendent for surveyor coordination.
+2. Logs the BWMC override (no action needed).
+3. Schedules the next review for the Cargo Ship Safety Equipment certificate at the 14-day mark.
+
+---
+
+## Multi-vessel rollup
+
+For fleet-wide reviews, the pipeline produces a heat-map style table — one row per vessel, one column per certificate type, colour-coded by expiry window. A reviewer scans across the row to see how exposed any given vessel is, and down the column to see if any certificate type is systematically under-managed across the fleet.
+
+A column with five vessels in the HIGH bucket but spread across different expiry months usually points to a process gap (renewal-coordinator capacity); a column with five vessels in HIGH bucket clustered in the same month points to a calendar artefact (whole class certificated together at delivery, all coming due together).
+
+---
+
+## What the senior review contains
+
+1. **Portfolio table** — every certificate with effective expiry and verdict.
+2. **Renewal timeline** — upcoming renewals grouped by urgency window.
+3. **Detention-risk score** — composite with contributing factors.
+4. **Lead-time gaps** — renewals with insufficient runway to the next port.
+5. **Flag overrides** — certificates that look expired but aren't (with reason).
+6. **Recommendations** — prioritised by deadline.
+7. **Escalation decision** — to whom, and why.
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Any statutory certificate expired (no override applies) | CRITICAL |
+| Mandatory certificate missing | CRITICAL |
+| Renewal lead-time insufficient for next port call | HIGH |
+| Multiple HIGH-window renewals with no plan | HIGH |
+| Detention-risk score = HIGH or CRITICAL | CRITICAL |
+| RO authorisation lapsed | HIGH |
+
+---
+
+## Why this is its own pipeline
+
+Class certificates are managed in a portal with their own rhythm. Statutory certificates touch flag administration, insurance brokers, charterer requirements, and PSC inspection regimes — different audience, different timeline, different intervention pattern. Keeping them separate means the senior review for each can be ranked appropriately and routed to the right superintendent.
+
+<Tip>
+The single highest-leverage data-quality investment in certificate management is keeping the issuing-authority field complete. A certificate without an issuing authority can't be resolved — every renewal starts with "who do we contact?", and the answer is in the certificate metadata.
+</Tip>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Related: Class" icon="ship" href="/skills/class">
+    Class certificates and surveys — separate pipeline with the same expiry and override logic.
+  </Card>
+  <Card title="Related: Compliance" icon="scale-balanced" href="/skills/compliance-analyzer">
+    PSC detention risk integrates certificate state with inspection findings and CII rating.
+  </Card>
+  <Card title="Related: Crew" icon="users" href="/skills/crew-analyzer">
+    Crew-side certificates (CoC, GMDSS, STCW endorsements, medicals) are tracked in the crew pipeline.
+  </Card>
+  <Card title="Related: Flag circulars" icon="flag" href="/skills/download-flag-circulars">
+    Some certificate renewal procedures depend on the latest flag circulars — keep the document corpus current.
+  </Card>
+</CardGroup>

@@ -1,0 +1,287 @@
+---
+title: "Main Engine Performance"
+description: "End-to-end pipeline that captures main engine telemetry, classifies cylinder uniformity, scores SFOC variance and overhaul exposure, and produces a TSI-grade expert review."
+---
+
+<Frame caption="Main Engine Performance — six-month parameter rollups, cylinder uniformity, SFOC variance, turbocharger health, and overhaul timing in one TSI-grade review.">
+  <img src="/images/hero/main-engine-performance-whitepaper.png" alt="Main Engine Performance pipeline capturing telemetry, cylinder data, pressures, turbocharger metrics, and overhaul hours into a unified review" style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
+</Frame>
+
+## Executive summary
+
+The main engine is the single most expensive equipment item on a vessel and the single largest fuel consumer. A 5% SFOC drift means several hundred dollars per day at sea — at scale, hundreds of thousands per year per vessel. A late cylinder overhaul means an engine failure at sea — usually the most expensive recovery a fleet ever sees. A misbalanced cylinder means an asymmetrically worn liner — eventually a major overhaul that should have been a top-end.
+
+The **Main Engine Performance** pipeline turns the existing data — ERP monthly performance reports, telemetry exports, the engine register — into something a Technical Superintendent can act on without reading every monthly file. It captures a six-month rolling window of every monitored parameter, computes deviations against the maker's design and against the rest of the fleet, and routes anything that crosses an operating threshold to the right person.
+
+## Architecture
+
+```
+       ┌──────────────────────────────────────────┐
+       │  ERP telemetry  ·  Engine register  ·  Forms │
+       └──────────────────────┬───────────────────┘
+                              │ monthly reports + specs
+                              ▼
+       ┌──────────────────────────────────────────┐
+       │   Stage 1 — Collection                    │
+       │   Standard collector  +  Microapp        │
+       │   collector (with screenshots)           │
+       └──────────────────────┬───────────────────┘
+                              │ structured telemetry
+                              ▼
+       ┌──────────────────────────────────────────┐
+       │   Stage 2 — Analysis                      │
+       │   • Cylinder uniformity                   │
+       │   • SFOC variance vs design               │
+       │   • Pressure deviation                    │
+       │   • Turbocharger health                   │
+       │   • Overhaul timing                       │
+       │   • Six-month parameter rollup            │
+       └──────────────────────┬───────────────────┘
+                              │ verdict + scores
+                              ▼
+       ┌──────────────────────────────────────────┐
+       │   Stage 3 — Expert review                 │
+       │   Auto-escalate to TSI when triggered    │
+       └──────────────────────────────────────────┘
+```
+
+---
+
+## Stage 1 — Data collection
+
+### Where the data comes from
+
+| Source | What it provides |
+|--------|------------------|
+| **Vessel ERP** | Engine register, monthly performance reports, running hours, alarms history |
+| **ME Performance microapp** | Polynomial baseline curves, shop-trial overlays, deviation analysis |
+| **Vessel-side ME performance form** | Monthly per-cylinder data filed by Chief Engineer |
+| **PMS counter feed** | Hours since cylinder / top-end / major overhaul |
+
+ERP records the structured engine register and monthly reports; performance forms are vessel-side submissions; the microapp adds the visual evidence layer for owner / charterer correspondence. The pipeline supports two collectors with the same downstream contract:
+
+<Tabs>
+  <Tab title="Standard collector">
+    Pulls the latest performance entry from the ERP telemetry feed for one vessel at a time. Output is a single structured record covering the most recent reporting period.
+  </Tab>
+  <Tab title="Microapp collector (with visuals)">
+    Drives the ME Performance microapp via a headless browser, captures the API responses for performance, baseline polynomials, and shop-trial data, and bundles a screenshot of every dashboard tab. Used when the senior review will reference the live microapp visuals — typical for charterer or owner submissions.
+  </Tab>
+</Tabs>
+
+### What gets captured
+
+| Domain | Data |
+|--------|------|
+| Engine state | Running hours, RPM, load, power output |
+| Per-cylinder | Pmax, Pcomp, exhaust temperature, FW inlet/outlet temp, PCO outlet |
+| Combustion | Mean indicated pressure, peak pressure, scavenge pressure |
+| Aspiration | Turbocharger speed, boost pressure, exhaust back-pressure |
+| Maintenance | Hours since last cylinder, top-end, and major overhaul |
+| Alarms | Active alarms with severity at sample time |
+
+Microapp collection adds:
+
+- Polynomial baseline curves used by the microapp for deviation overlays
+- Original shop-trial values for comparison
+- Tab-by-tab screenshots: overview, deviation, trends, cylinder, turbocharger, alarms
+
+### Output
+
+Both collectors append a timestamped record to the vessel's main-engine case folder with the exact same fields, so the analyzer is collector-agnostic.
+
+---
+
+## Stage 2 — Analysis
+
+### 2.1 Cylinder uniformity
+
+Even cylinder loading is the single most important indicator of engine health. A cylinder running hotter than its neighbours points to a fuel-injector defect, a stuck exhaust valve, or piston-ring blow-by — usually weeks before the engine itself flags an alarm.
+
+The analyzer computes deviation per cylinder:
+
+$$
+\Delta T_i = T_i - \bar{T}, \quad \bar{T} = \frac{1}{N}\sum_{i=1}^{N} T_i
+$$
+
+Verdict:
+
+| Severity | Threshold |
+|----------|-----------|
+| OK | $\lvert \Delta T_i \rvert \leq 30\,°\text{C}$ |
+| WARNING | $30\,°\text{C} < \lvert \Delta T_i \rvert \leq 50\,°\text{C}$ |
+| CRITICAL | $\lvert \Delta T_i \rvert > 50\,°\text{C}$ |
+
+The same deviation maths runs on Pmax and Pcomp. A cylinder that is hot **and** has low Pmax is the classic exhaust-valve signature; a cylinder that is hot **and** has high Pmax usually points to fuel-injector overdelivery.
+
+### 2.2 SFOC variance
+
+Specific Fuel Oil Consumption is load-dependent — comparing raw values across operating points produces nonsense. The analyzer always normalises to the maker's design SFOC at the current load:
+
+$$
+\text{Variance \%} = \frac{\text{SFOC}_\text{actual} - \text{SFOC}_\text{design}(P)}{\text{SFOC}_\text{design}(P)} \times 100
+$$
+
+A 3-point moving average smooths month-to-month noise; persistent variance above 5% is flagged, above 8% triggers escalation.
+
+### 2.3 Six-month parameter rollup
+
+Trend matters more than spot values. The analyzer builds a rolling six-month grid of every monitored parameter — per cylinder per month — and surfaces parameters whose mean is drifting. Missing months are surfaced too: a vessel that hasn't filed a performance report for three consecutive months is itself a red flag.
+
+#### Code snapshot
+
+The dashboard logic that drives the rollup, condensed:
+
+```python
+# Build a six-month grid keyed by (cylinder, month), values from performance reports
+for unit in sorted(all_units):
+    unit_row = {"units": unit}
+
+    for month_date, month_label in zip(six_months_dates, six_months_labels):
+        performance = performance_data.get(month_date)
+
+        if performance == "No Data Available":
+            current = (month_date.month == datetime.utcnow().month and
+                       month_date.year  == datetime.utcnow().year)
+            unit_row[month_label] = "Report yet to be submitted" if current \
+                                    else "Missing Report"
+            continue
+
+        unit_data = next(
+            (u for u in performance["data"]["parameter"]
+             if u.get("ENGPERTRANSLINENO") == unit),
+            None
+        )
+        unit_row[month_label] = (
+            round(unit_data[parameter_key], 2)
+            if unit_data and unit_data.get(parameter_key) is not None
+            else "No Data Available"
+        )
+```
+
+Two pieces of nuance matter: the analyzer distinguishes **"report yet to be submitted"** (current month — expected gap) from **"missing report"** (past month — actual gap). The first is a forms problem; the second is a compliance problem.
+
+### 2.4 Pressure deviation
+
+Peak combustion pressure, mean indicated pressure, and scavenge pressure are checked against the maker's spec for the operating point. The analyzer maps deviations to specific failure modes:
+
+| Pattern | Likely cause |
+|---------|--------------|
+| Pmax low + Pcomp normal | Fuel injector overdelivery / late timing |
+| Pmax high + Pcomp high | Excessive compression — piston ring overhaul candidate |
+| Pmax normal + Pcomp low | Compression loss — exhaust valve or ring pack |
+| Scavenge low + exhaust back-pressure high | Turbocharger fouling |
+| Scavenge low + cooler ΔT low | Scavenge cooler fouling |
+
+### 2.5 Turbocharger health
+
+Turbocharger boost low **and** exhaust back-pressure high is the textbook turbo-fouling signature. The analyzer computes:
+
+$$
+\eta_\text{tc} = \frac{P_\text{boost}}{P_\text{exhaust\_back}}
+$$
+
+A falling $\eta_\text{tc}$ across three reports is flagged for cleaning regardless of whether either pressure is individually outside spec.
+
+### 2.6 Overhaul timing
+
+Hours-to-next overhaul are computed against the maker's interval:
+
+$$
+H_\text{remaining} = H_\text{interval} - (H_\text{current} - H_\text{last\_overhaul})
+$$
+
+Tier mapping:
+
+| $H_\text{remaining}$ | Status |
+|----------------------|--------|
+| $< 0$ | Overdue — CRITICAL |
+| $0 \leq H_\text{remaining} < 500$ | Imminent — escalate |
+| $500 \leq H_\text{remaining} < 2000$ | Port-call coordination |
+| $\geq 2000$ | Healthy |
+
+---
+
+## Worked example
+
+**Vessel**: `MV ONE ATLAS` (IMO 9290127), MAN 8K90 MC-C.
+
+After a refresh, the analyzer reports:
+
+| Domain | Finding |
+|--------|---------|
+| Cylinder uniformity | Cylinder 5 exhaust temp 38 °C above mean — WARNING |
+| SFOC | 6.8% variance over design at 75% MCR, sustained 3 months — flagged |
+| Pressure | Cylinder 5 Pmax 12 bar below mean, Pcomp normal — points to fuel-injector overdelivery |
+| Turbocharger | $\eta_\text{tc}$ down 9% over 3 reports — cleaning recommended |
+| Overhaul | Cylinder 5 top-end overhaul in 380 hours — escalate |
+
+Composite verdict: **HIGH** — cylinder 5 has converging signals (hot, low Pmax, near overhaul). The pipeline:
+
+1. Sets escalation flag, priority CRITICAL
+2. Updates the case to `awaiting-tsi-review`
+3. Sends an A2A message to the TSI inbox with the per-cylinder evidence and the recommended actions
+
+**Recommended actions** (from the analyzer):
+
+1. Schedule cylinder 5 fuel-injector replacement at next port — coordinate spares.
+2. Schedule turbocharger water wash within 7 days; wet-cleaning at next port.
+3. Plan cylinder 5 top-end overhaul at the next docking window — book superintendent attendance.
+
+---
+
+## Output deliverables
+
+- **Executive summary** — overall ME status, headline findings
+- **Cylinder uniformity table** — per-cylinder deviation, severity, likely cause
+- **SFOC analysis** — variance trend, cost impact, root-cause candidates
+- **Six-month parameter rollup** — every parameter per cylinder per month, gaps surfaced
+- **Pressure analysis** — deviation per cylinder, mapped to failure mode
+- **Turbocharger assessment** — $\eta_\text{tc}$ trend
+- **Overhaul plan** — urgent / upcoming, port-call coordination
+- **Recommendations** — prioritised actions with timeline and cost
+- **Escalation decision** — auto-routed to TSI when triggered
+
+When microapp collection is used, the deliverable also embeds the captured screenshots so the review references the same visual the operator sees in production.
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Cylinder deviation above 50 °C | CRITICAL |
+| SFOC variance above 8% sustained | HIGH |
+| Cylinder overhaul overdue | CRITICAL |
+| Turbocharger boost low + exhaust high | HIGH |
+| Peak pressure outside maker spec | HIGH |
+| Three or more missing monthly reports | HIGH |
+
+---
+
+## Why script-driven
+
+Cylinder-deviation maths, SFOC-curve normalisation, and pressure-spec lookups all live in deterministic Python templates. The model interprets results into narrative; it doesn't recompute. That means a review of POSUN this month and the same review next month produce identical numbers given identical inputs — which is the only way an audit trail holds up.
+
+<Note>
+The microapp collector and the standard collector produce the same downstream record. The choice is operational: when a review will be referenced by a charterer or in a Class dispute, use the microapp collector so the screenshots travel with the numbers.
+</Note>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Source templates" icon="code">
+    Performance analysis suite — ME monthly parameter rollup and engine specifications &amp; running hours.
+  </Card>
+  <Card title="Related: Auxiliary engines" icon="bolt" href="/skills/ae-performance">
+    Same analysis pattern, applied to AE generators.
+  </Card>
+  <Card title="Related: Lube oil" icon="droplet" href="/skills/lube-oil-analyzer">
+    Wear-metal trends often confirm or rule out a cylinder finding.
+  </Card>
+  <Card title="Related: Fuel oil" icon="gas-pump" href="/skills/fuel-oil-analyzer">
+    Fuel quality is the most common root cause for sustained SFOC variance.
+  </Card>
+</CardGroup>

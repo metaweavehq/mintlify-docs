@@ -1,0 +1,242 @@
+---
+title: "Defect Surveillance"
+description: "A unified view of every defect against a vessel — from PSC findings to near-misses to open Conditions of Class — with severity-weighted age scoring and systemic-pattern detection."
+---
+
+<Frame caption="Defect Surveillance — 19 defect surfaces normalised into a single ranked list with severity, age, and equipment-cluster scoring.">
+  <img src="/images/hero/defect-surveillance-whitepaper.png" alt="Defect Surveillance pipeline ingesting PSC, SIRE, CDI, audit, ADI, near-miss, HMX, SCMM, VIR, and class CoC findings into a unified ranked output" style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
+</Frame>
+
+> *"How many open defects do we have?"* is the wrong question. The right one is *"how many of them have been open longer than they should be, and how many of those are on the same equipment?"*
+
+A vessel collects defects from twenty different angles: PSC inspections, SIRE, CDI, charterers, owners, terminals, internal audits, navigational audits, flag state, external audits, ADI events, near-misses, Hull &amp; Machinery, SCMM, the previous VIR, the most recent VIR, and Conditions of Class. The numbers add up fast — most fleets carry several hundred open items at any time. The work isn't tracking the count. It's separating the ones that need a Technical Superintendent's attention from the ones that are just paperwork.
+
+The **Defect Surveillance** pipeline pulls every defect source into one place, scores age and severity, clusters by equipment family, and tracks closure-rate trends. It produces a single ranked list — the items most likely to bite, sorted with the worst on top — alongside the systemic patterns that explain why this vessel keeps generating the same kind of defect.
+
+---
+
+## Sources
+
+A finding can come from any of these surfaces. Each one has its own filing format, its own due-date convention, its own severity vocabulary. The pipeline normalises them all into the same record shape:
+
+| Source | Origin | Typical severity vocabulary | Where the data comes from |
+|--------|--------|------------------------------|---------------------------|
+| **PSC** | Port State Control inspection | Major / Detainable / Minor | Port-state-control regime portals (Paris MoU, Tokyo MoU, Indian Ocean MoU, Mediterranean MoU, Caribbean MoU, Black Sea MoU, Abuja MoU, USCG, Riyadh) |
+| **SIRE** | OCIMF tanker vetting | Observation severity 1–4 | OCIMF SIRE 2.0 portal |
+| **CDI** | Chemical Distribution Institute | Chemical-tanker observations | CDI portal |
+| **Class CoC** | Class society Condition of Class | CoC / Memoranda / Notes / Recommendation | Class portals (ABS, BV, DNV, LR, NK, CCS, KR, IRS, RINA) |
+| **Flag state** | Flag administration inspection | Deficiency / Detention | Flag administration correspondence + ERP |
+| **Internal audits** | SMS internal audit | Major / Minor non-conformity | ERP audit module |
+| **Navigational audits** | Navigation team audits | Bridge / cargo / safety findings | ERP nav-audit module |
+| **Charterer / Owner / Terminal** | Inspections | Per-inspector grading | ERP inspection module + email parsing |
+| **HMX** | Hull &amp; Machinery underwriter survey | Critical / High / Medium / Low | Underwriter survey reports |
+| **SCMM** | Ship-class machinery monitoring | Equipment-driven | Class portal feed |
+| **VIR (current &amp; previous)** | Vessel inspection report | Open / Closed / Pending | ERP VIR module |
+| **ADI** | Accidents, damages, injuries | Incident-driven | ERP incident module |
+| **Near-miss** | Safety reports from crew | Behavioural / equipment | ERP IFFR / near-miss module |
+| **External audits** | Third-party audits | Per-auditor grading | Auditor reports + ERP |
+
+Nineteen sources, one normalised store. A summary rollup flattens all of them into a single nested status structure:
+
+```python
+def flatten_json(imo, nested_data):
+    """Flatten nested defect summary into per-status records."""
+    records = []
+    for key, values in nested_data.items():
+        question      = values.get("questionName")
+        updated_at    = values.get("updatedAt")
+        status_counts = values.get("value", {}).get("status_counts", {})
+        additional    = values.get("value", {})
+
+        # Per-source breakdown (Class, Shippalm, …)
+        for source_key, source_value in additional.items():
+            if isinstance(source_value, dict) and "status_counts" in source_value:
+                for status, count in source_value["status_counts"].items():
+                    records.append({"imo": imo, "questionName": question,
+                                    "source": source_key, "status": status,
+                                    "count": count, "updatedAt": updated_at})
+
+        # Roll-up at the main level
+        if status_counts:
+            for status, count in status_counts.items():
+                records.append({"imo": imo, "questionName": question,
+                                "source": "Main", "status": status,
+                                "count": count, "updatedAt": updated_at})
+    return records
+```
+
+Once flattened, every defect in the fleet has the same shape: vessel, source, severity, status, dates. Everything downstream operates on that shape — there is no per-source analysis logic.
+
+---
+
+## How findings are ranked
+
+The pipeline uses three independent dimensions and combines them into a single rank.
+
+### Severity
+
+Each finding inherits a severity from its source vocabulary, then gets normalised:
+
+| Severity | Examples |
+|----------|----------|
+| **CRITICAL** | PSC detainable, open CoC near deadline, ADI casualty, HMX critical |
+| **MAJOR** | PSC major, internal audit major NC, SIRE 1–2, HMX high |
+| **MINOR** | PSC minor, SIRE 3–4, near-miss, charterer suggestion |
+
+### Age tier
+
+Age in days from the finding's open date:
+
+| Tier | Window |
+|------|--------|
+| Recent | $\leq 30$ days |
+| Active | $30$ to $90$ days |
+| Overdue | $90$ to $180$ days |
+| Chronic | $> 180$ days |
+
+A spike of CRITICAL items in the Chronic tier is the single largest escalation trigger in the pipeline — items that old typically reflect a closure-process gap, not an isolated incident.
+
+### Equipment-family clustering
+
+Every defect is tagged with an equipment family (engine, cargo system, navigation, accommodation, hull, safety, environmental). Three or more defects on the same family flips the verdict from "isolated incidents" to "systemic issue":
+
+$$
+\text{Cluster signal}(f) = \begin{cases}
+\text{Systemic} & \text{if } N_\text{open}(f) \geq 3 \\
+\text{Isolated} & \text{otherwise}
+\end{cases}
+$$
+
+A systemic cluster on the cargo system is a different conversation than three unrelated defects across three families.
+
+---
+
+## Closure-rate health
+
+The pipeline tracks closure rate period-on-period:
+
+$$
+\text{Closure rate} = \frac{\text{Defects closed in period}}{\text{Open at start} + \text{Opened in period}}
+$$
+
+Two patterns matter:
+
+- **Falling closure rate + rising open count** — operational drift. The team is opening defects faster than closing them. Usually points to a resource gap or a process that's stopped working.
+- **Stable closure rate + rising open count** — capacity problem. The team is keeping pace but new defects are arriving faster than expected, often after a change of crew or after a heavy port-call window.
+
+Closure-rate verdict is reported alongside the absolute open count so the reviewer sees direction and magnitude together.
+
+---
+
+## Stuck defects
+
+A defect that should have been closed but hasn't been is more useful when grouped by **why** it's stuck. The pipeline classifies blockers:
+
+| Blocker | Typical resolution |
+|---------|---------------------|
+| Awaiting parts | Procurement chase, ETA confirmation |
+| Awaiting port | Schedule into next port call |
+| Awaiting vendor | Contract escalation |
+| Awaiting class approval | Class follow-up |
+| Awaiting investigation | Internal investigation completion |
+| Other / unclassified | Manual triage |
+
+Stuck defects are the highest-leverage list a TSI can act on — most of them are unblocked by a single email or a single phone call.
+
+---
+
+## A worked sweep on `MV POSUN`
+
+A weekly defect sweep produces this view (numbers are illustrative):
+
+| Metric | Value |
+|--------|-------|
+| Open defects | 87 |
+| New this period | 11 |
+| Closed this period | 6 |
+| Closure rate | 0.063 (down from 0.18 last period) |
+| CRITICAL open | 4 |
+| CRITICAL in Chronic tier (&gt;180d) | 2 |
+
+Equipment clusters:
+
+| Family | Open count | Cluster signal |
+|--------|-----------|----------------|
+| Cargo system | 6 | Systemic |
+| Engine | 3 | Systemic (just crossed threshold) |
+| Safety | 2 | Isolated |
+| Accommodation | 5 | Systemic |
+| Other | 71 | — |
+
+Stuck defects:
+
+| Blocker | Count |
+|---------|-------|
+| Awaiting parts | 14 |
+| Awaiting port | 8 |
+| Awaiting vendor | 5 |
+| Awaiting class approval | 2 |
+
+**Verdict**: HIGH. Two CRITICAL findings open more than 6 months, falling closure rate, three systemic clusters. The pipeline:
+
+1. Tags `escalation_required: true`, priority CRITICAL
+2. Routes to TSI with a one-page brief: top 10 ranked defects, three systemic clusters, and the unblock list of 14 parts orders to chase.
+3. Generates a recommendation set focused on the systemic patterns, not the individual items — closing the cargo-system cluster is more valuable than closing five random defects.
+
+---
+
+## What the senior review contains
+
+A reviewer sees a vertical document organised by **what to act on**, not by source:
+
+1. **Top of the list** — the ranked top 10 defects across all sources, with the score breakdown visible.
+2. **Systemic clusters** — equipment families with three or more open defects, with the items in each cluster.
+3. **Stuck list** — the unblock-actions list, grouped by blocker.
+4. **Closure-rate trend** — the chart and the period-on-period number.
+5. **Source view (collapsed by default)** — the per-source counts for compliance reporting.
+6. **Recommendations** — prioritised by leverage, not by date.
+7. **Escalation decision** — to whom, and why.
+
+The reviewer can drill into the source view if they need it, but the default reading order is action-first.
+
+---
+
+## When the pipeline escalates
+
+| Trigger | Severity |
+|---------|----------|
+| Any CRITICAL defect open more than 30 days | CRITICAL |
+| Any safety-equipment defect open at all | CRITICAL |
+| Closure rate falling for 2+ consecutive periods | HIGH |
+| Equipment cluster (3+ defects same family) | HIGH |
+| Class CoC unresolved past deadline | CRITICAL |
+| Three or more PSC detainables on one inspection | CRITICAL |
+
+---
+
+## A note on data hygiene
+
+A surprising amount of defect-management work is data hygiene — duplicate findings filed against multiple sources, near-misses miscategorised as ADI, equipment family left blank. The pipeline surfaces these issues but does not silently fix them; a Technical Superintendent should know when their fleet's defect taxonomy is drifting.
+
+<Tip>
+The cleanest signal of fleet-wide defect-management health is whether the closure rate is steady. A vessel can carry a lot of open defects and still be healthy if the closure rate is steady and clusters are isolated. A vessel can carry few open defects and be unhealthy if the closure rate is collapsing.
+</Tip>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Source templates" icon="code">
+    Defect-management suite — 19 templates covering every defect surface (PSC, SIRE, CDI, audit, ADI, near-miss, HMX, SCMM, VIR, CoC, charterer, owner, terminal, navigational, external) plus a fleet-wide rollup.
+  </Card>
+  <Card title="Related: PMS" icon="wrench" href="/skills/pms-analyzer">
+    Many defects are open because their planned-maintenance window hasn't come up yet — PMS and defects compose.
+  </Card>
+  <Card title="Related: Class" icon="ship" href="/skills/class">
+    Open Conditions of Class are tracked in both pipelines — class for the regulatory deadline, defects for the operational impact.
+  </Card>
+  <Card title="Related: Compliance" icon="scale-balanced" href="/skills/compliance-analyzer">
+    PSC, SIRE, and CDI findings carry detention-risk weight in the compliance pipeline.
+  </Card>
+</CardGroup>

@@ -1,0 +1,248 @@
+---
+title: "Procurement Surveillance"
+description: "PR-to-payment funnel analysis — aged POs, forwarder backlog, supplier scorecards, safety-critical pipeline tracking."
+---
+
+Every spare on board started life as a Purchase Requisition. Between PR and the spare being installed there are seven or eight stages — approval, vendor quote, PO release, supplier production, freight booking, forwarder consolidation, port delivery, vessel receipt. A defect that's been "awaiting parts" for ninety days is almost always stuck somewhere in that chain.
+
+The **Procurement Surveillance** pipeline does two things: it tracks every active PO through the funnel, and it surfaces the structural problems — aged POs, supplier underperformance, budget overrun — that systematically slow the funnel down.
+
+## Where the data comes from
+
+| Source | What it provides |
+|--------|------------------|
+| **Vessel ERP (procurement module)** | PR, PO, approval chain, supplier, invoice, payment status |
+| **Freight forwarder integrations** | Consignment tracking, ETA, customs status |
+| **ERP supplier master** | Approval status, contracts, payment terms |
+| **Currency reference feeds** | FX rates for invoice reconciliation |
+| **Email correspondence (chasing)** | Supplier acknowledgements, ETA updates, dispute threads |
+
+Procurement data is mostly ERP-internal. The forwarder layer adds external visibility for the in-transit stage; the email pipeline ([Email Surveillance](/skills/outlook-email-sync)) provides the chase-and-response thread for any PO sitting beyond its stage threshold.
+
+---
+
+## The funnel
+
+```
+   PR raised  ──▶  PO approved  ──▶  Supplier confirms  ──▶
+   Goods ready  ──▶  Forwarder picks up  ──▶  Vessel receives  ──▶
+   Invoice cleared
+```
+
+Each transition has a stage threshold:
+
+| Stage | Threshold | What "stuck" means |
+|-------|-----------|---------------------|
+| PR → PO approval | 5 days | Probably an authority-limit or budget-code issue |
+| PO → supplier confirmation | 3 days | Supplier didn't acknowledge — chase needed |
+| Supplier → goods ready | per quoted lead-time | Production / stock issue |
+| Goods → forwarder pickup | 14 days | Forwarder consolidation gap |
+| Forwarder → vessel | per route ETA | In transit |
+| Vessel receipt → invoice clearance | 7 days | Documentation / accounting |
+
+The pipeline computes time-in-stage for every active PO:
+
+$$
+T_\text{stage}(\text{PO}) = t_\text{exit} - t_\text{enter}
+$$
+
+A PO sitting beyond the stage threshold is flagged. The aggregate of stuck POs across stages is the funnel-health view.
+
+---
+
+## Three views, three questions
+
+### View 1 — Forwarders backlog
+
+POs with forwarders that haven't yet reached the vessel:
+
+> *"What's in transit, when does it arrive, and is anything safety-critical on board?"*
+
+The view sorts by ETA and surfaces safety-critical items at the top regardless of ETA. A safety-critical spare delayed by a week is a different conversation than a routine stores order delayed by a week.
+
+### View 2 — Open POs older than 180 days
+
+This is the structural-problem view:
+
+> *"What is so old that something is fundamentally wrong with how this PO is being handled?"*
+
+A PO older than 180 days is rarely just "still in transit". It's almost always one of:
+
+- **Cancelled but not closed** — the actual order was cancelled, but the PO record never got updated
+- **Supplier abandoned** — supplier stopped responding, no follow-up
+- **Wrong vessel** — PO raised against the wrong vessel and never noticed
+- **Partial delivery dispute** — some items delivered, dispute on the rest, PO held open
+- **Forgotten** — nothing actually happened
+
+This view is the highest-leverage list — most items can be closed with a single phone call, and the closure rate jumps immediately.
+
+### View 3 — Purchase log
+
+End-to-end log from PR raise to invoice clearance:
+
+> *"For audit and analytics — when did each thing happen?"*
+
+This is the structured record the other two views aggregate from. A reviewer rarely reads it in full, but it's the source of truth when there's a question about a specific PO's history.
+
+---
+
+## Supplier scorecards
+
+Per supplier, the pipeline tracks:
+
+$$
+\text{On-time \%} = \frac{N_\text{on-time}}{N_\text{total}} \times 100
+$$
+
+$$
+\bar{T}_\text{lead} = \frac{1}{N}\sum_{i=1}^{N} (t_\text{delivered}_i - t_\text{ordered}_i)
+$$
+
+Plus quality issues per shipment and recent escalations. A scorecard below 70% on-time triggers a renegotiation flag.
+
+The supplier-quality dimension matters because the same supplier delivering late on five vessels is a fleet-wide problem, not a per-vessel one. The pipeline aggregates supplier metrics across the fleet.
+
+---
+
+## Budget compliance
+
+Per category (technical / stores / lube / victualling / repairs / etc.):
+
+$$
+\text{Variance \%} = \frac{\text{Actual} - \text{Budget}}{\text{Budget}} \times 100
+$$
+
+Variance over 10% is flagged; over 25% triggers escalation. Cross-references the [financial pipeline](/skills/financial-analyzer) for the year-end forecast view.
+
+---
+
+## Safety-critical pipeline
+
+Items tagged safety-critical get a separate timeline. Any delay against ETA is treated as critical regardless of magnitude. The pipeline assembles a daily list:
+
+| Item | Vessel | Supplier | Stage | Days in stage | ETA |
+|------|--------|----------|-------|---------------|-----|
+| Lifeboat winch motor | POSUN | Schat-Harding | Forwarder | 22 | 2026-05-12 |
+| Fire-pump impeller | OCEAN | Wärtsilä | Goods ready | 3 | TBD |
+| EEBD canister x4 | NEXUS | Drager | Vessel receipt | 1 | delivered, awaiting receipt |
+
+The list is short by design — most safety-critical items move quickly. Anything sitting on this list more than a few days is escalation-worthy.
+
+---
+
+## Implementation reference
+
+The 180-day filter, condensed:
+
+```python
+# Filter POs older than 180 days that are still open
+threshold_date = datetime.utcnow() - timedelta(days=180)
+
+aged_pos = po_collection.aggregate([
+    {"$match": {
+        "imo": {"$in": active_imos},
+        "status": {"$nin": ["CLOSED", "CANCELLED", "INVOICED"]},
+        "prRaisedDate": {"$lte": threshold_date}
+    }},
+    {"$addFields": {
+        "ageDays": {
+            "$divide": [
+                {"$subtract": [datetime.utcnow(), "$prRaisedDate"]},
+                1000 * 60 * 60 * 24
+            ]
+        }
+    }},
+    {"$sort": {"ageDays": -1}},
+])
+```
+
+The "with forwarders" view joins POs with the forwarder-tracking collection on the consignment number, then surfaces ETA and safety-critical flag. The full purchase log does the same but across every stage transition.
+
+---
+
+## Worked example: a vessel-level sweep
+
+`MV POSUN`, weekly procurement review:
+
+| View | Count | Notable |
+|------|------:|---------|
+| Forwarders backlog | 18 | 2 safety-critical (one delayed 22 days vs ETA) |
+| Open &gt; 180 days | 11 | 6 likely "cancelled but not closed", 3 supplier abandoned, 2 partial-delivery disputes |
+| Aged at approval stage | 4 | Awaiting authority approval &gt; 7 days |
+| Budget variance | Technical +18%, Stores +6% | Technical category over threshold |
+| Supplier scorecards (failing) | 2 | Vendor X 62% on-time, Vendor Y 71% on-time |
+
+**Verdict**: HIGH on the technical-budget overrun + the safety-critical lifeboat-winch delay. The pipeline:
+
+1. Flags the lifeboat-winch motor as the immediate action — supplier and forwarder need a chase today.
+2. Generates the 11-PO close-out list with predicted disposition for each.
+3. Routes the budget overrun to the [financial pipeline](/skills/financial-analyzer) for variance attribution and year-end forecast.
+4. Flags Vendor X for renegotiation review.
+
+---
+
+## Closure-rate trend
+
+Same logic as the [defects pipeline](/skills/defects):
+
+$$
+\text{Closure rate} = \frac{N_\text{POs closed in period}}{N_\text{open at start} + N_\text{opened in period}}
+$$
+
+A falling closure rate combined with rising aged-PO count is the structural drift indicator.
+
+---
+
+## What the senior review contains
+
+1. **Headline** — open PO count, value, aged count, closure rate, safety-critical pipeline status.
+2. **Safety-critical list** — every safety-critical PO not yet on board, with stage and ETA.
+3. **Aged POs** — close-out candidates with predicted disposition.
+4. **Forwarders backlog** — what's in transit and when it arrives.
+5. **Budget compliance** — per-category variance, with cross-link to financial review.
+6. **Supplier scorecards** — failing suppliers with renegotiation recommendation.
+7. **Closure-rate trend** — chart and verdict.
+8. **Recommendations** — prioritised by leverage; close-outs and chase-ups separated from supplier renegotiation.
+9. **Escalation decision** — to whom, and why.
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Safety-critical item delayed against ETA | CRITICAL |
+| Budget overrun above 25% in any category | HIGH |
+| Supplier on-time below 70% with active POs | HIGH |
+| PO awaiting approval more than 14 days | HIGH |
+| Stuck delivery more than 30 days with no update | CRITICAL |
+| Aged-PO count rising for 2+ consecutive periods | HIGH |
+
+---
+
+## Why old POs accumulate
+
+A PO that should have been closed three months ago is rarely an in-flight issue. Most are administrative — the goods arrived, were installed, the engineer logged the spare, and nobody updated the PO record. The pipeline's 180-day filter exists because below 90 days the noise is too high (legitimately in-transit POs are common); below 180 the structural problems are isolated; above 180, the structural problems dominate.
+
+<Note>
+The fastest improvement in procurement metrics on most vessels is closing aged POs. They're already done; they just need to be marked done. A 30-minute review with the chief engineer typically clears half the backlog.
+</Note>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Templates: purchase-management" icon="code">
+    Purchase-management suite — POs with forwarders, open POs older than 180 days, and the end-to-end purchase log.
+  </Card>
+  <Card title="Related: Financial" icon="dollar-sign" href="/skills/financial-analyzer">
+    Budget variance attribution and year-end forecast — same numbers, different audience.
+  </Card>
+  <Card title="Related: Defects" icon="triangle-exclamation" href="/skills/defects">
+    "Awaiting parts" defects unblock when the corresponding PO advances — defects and procurement compose.
+  </Card>
+  <Card title="Related: PMS" icon="wrench" href="/skills/pms">
+    Critical-spare stockouts surface in PMS Summary and drive procurement priority.
+  </Card>
+</CardGroup>

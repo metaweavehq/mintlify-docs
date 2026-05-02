@@ -1,0 +1,297 @@
+---
+title: "Emissions Surveillance"
+description: "CII, EEOI, EU ETS, FuelEU and IMO DCS — every regulatory regime that turns CO₂ into commercial consequence, with rolling computation and forecast."
+---
+
+<Frame caption="Emissions Surveillance — CII, EEOI, EU ETS, FuelEU and IMO DCS computed in parallel from noon reports and bunker records, projected to year-end.">
+  <img src="/images/hero/emissions-surveillance-whitepaper.png" alt="Emissions Surveillance pipeline reading noon reports and bunker delivery notes into the five emissions regulatory regimes with year-end forecast" style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
+</Frame>
+
+CO₂ is no longer a nice-to-track metric. Five regulatory regimes turn it into commercial consequence — directly through carbon allowances and indirectly through ratings that determine charter eligibility. The numbers come from a single source: noon reports plus bunkering records. Everything else is interpretation.
+
+The **Emissions Surveillance** pipeline reads the source data, runs every required calculation, projects the year-end position for each regime, and routes findings to the people who can act before the ratings lock in.
+
+---
+
+## Where the data comes from
+
+| Source | What it provides |
+|--------|------------------|
+| **Noon reports** | Daily distance, fuel consumption per grade, cargo on board |
+| **Bunker Delivery Notes (BDN)** | Bunkered quantity, fuel grade, sulphur content |
+| **Voyage plan (ERP)** | Port pairs, ECA exposure, scheduled distance |
+| **Cargo manifest** | Cargo tonnes per voyage — required for EEOI |
+| **EU allowance market feed** | Current EUA price for EU ETS forecast |
+| **IMO required CII tables** | Reference required intensity per vessel type and DWT |
+
+The numbers come from a single internal source — noon reports plus bunkering records. Everything else (CII bands, EU allowance prices, FuelEU compliance line) is reference data the pipeline applies on top.
+
+---
+
+## The five regimes
+
+| Regime | Who enforces | What's measured | Consequence |
+|--------|--------------|------------------|-------------|
+| **CII** | IMO | Annual carbon intensity (CO₂ per transport work) | A–E rating; D for 3 years or E for 1 year requires SEEMP III |
+| **EEOI** | IMO (voluntary historically, increasingly mandatory) | Per-voyage CO₂ per cargo-tonne-mile | Operational benchmark |
+| **EU ETS** | European Commission | CO₂ on EU-touching voyages | Allowance purchase obligation |
+| **FuelEU Maritime** | European Commission | GHG intensity well-to-wake | Penalty per gram non-compliance |
+| **IMO DCS** | IMO | Annual fuel consumption reporting | Compliance reporting only |
+
+Each regime uses the same source data but slices it differently — what counts as "emissions in scope" varies, and the metric definition varies. The pipeline computes each regime independently because they don't reduce to a single number.
+
+---
+
+## CII — the centerpiece
+
+The IMO Carbon Intensity Indicator is the most operationally consequential of the five. The attained CII for a vessel:
+
+$$
+\text{CII}_\text{attained} = \frac{\sum_{i} \text{CO}_2_i \text{ (g)}}{\text{Capacity} \cdot \sum_{i} \text{Distance}_i \text{ (nm)}}
+$$
+
+where capacity is DWT (or GT for passenger vessels) and the sum is over all voyages in the operating year.
+
+CO₂ per fuel:
+
+$$
+\text{CO}_2_i = m_\text{fuel}_i \cdot \text{CF}_\text{fuel}
+$$
+
+with CF (carbon factor) values:
+
+| Fuel | CF (gCO₂/g fuel) |
+|------|-----------------:|
+| HSFO | 3.114 |
+| VLSFO | 3.151 |
+| MGO | 3.206 |
+| LNG (combustion) | 2.750 |
+
+The required CII for the year, $\text{CII}_\text{required}$, is set by IMO per vessel type and DWT. The rating bands:
+
+| Rating | Threshold (relative to required) |
+|--------|----------------------------------|
+| A | $\leq 0.86 \cdot \text{CII}_\text{required}$ |
+| B | $0.86$ to $0.94$ |
+| C | $0.94$ to $1.06$ |
+| D | $1.06$ to $1.18$ |
+| E | $> 1.18 \cdot \text{CII}_\text{required}$ |
+
+A vessel rated D for three consecutive years must update its SEEMP III with corrective measures. A vessel rated E for one year must do the same.
+
+---
+
+## CII trajectory and forecast
+
+The pipeline doesn't just report the latest CII — it forecasts year-end. Two methods compose:
+
+### Method 1 — Linear projection
+
+$$
+\text{CII}_\text{forecast} = \text{CII}_\text{attained}(t) + \dot{m}_\text{recent} \cdot (T - t)
+$$
+
+where $\dot{m}_\text{recent}$ is the trend over the last 3 months and $T$ is year-end.
+
+### Method 2 — Operational profile
+
+If the vessel's voyage plan for the rest of the year is known, the analyzer projects emissions using planned distance and projected fuel consumption per leg. More accurate when the operational pattern is stable.
+
+The forecast is reported as a confidence range — a vessel currently at C-band attaining 1.05 with a forecast of 1.09 is heading into D territory, but the band depends on the residual operational pattern. Surfacing the range early (mid-year) gives time to act.
+
+---
+
+## EEOI
+
+The voyage-level energy-efficiency indicator:
+
+$$
+\text{EEOI} = \frac{\sum_i \text{CO}_2_i}{\sum_i (m_\text{cargo}_i \cdot D_i)}
+$$
+
+EEOI uses cargo-tonne-miles rather than capacity-miles, so it captures actual cargo carried rather than theoretical capacity. A vessel running below capacity (typical on backhauls) shows high EEOI relative to CII — useful signal that the operational pattern is the issue rather than the engineering.
+
+EEOI is computed per voyage and aggregated per quarter and per year for trending.
+
+---
+
+## EU ETS
+
+EU Emissions Trading System obligations cover:
+
+- 100% of CO₂ on intra-EU voyages
+- 50% of CO₂ on EU-extra-EU voyages (one end EU)
+- 0% on extra-EU voyages
+
+For each scope-relevant voyage:
+
+$$
+\text{Allowances}_i = \text{CO}_2_i \cdot \text{Scope factor}_i
+$$
+
+Aggregated across the year, multiplied by the EU allowance market price, produces the financial obligation. The pipeline computes the running total and projects year-end allowance demand so the commercial team can plan the EUA purchase or surrender position.
+
+A phased compliance applies in early years: 40% of obligation in 2024, 70% in 2025, 100% from 2026 onwards.
+
+---
+
+## FuelEU Maritime
+
+FuelEU is intensity-based and well-to-wake, so it captures the upstream emissions of the fuel as well as the combustion emissions. The regime uses GHG intensity (gCO₂eq/MJ) rather than CO₂ mass:
+
+$$
+\text{GHG}_\text{intensity} = \frac{\sum_i \text{GHG}_i^\text{wtw}}{\sum_i E_i}
+$$
+
+where $E_i$ is energy content of fuel consumed in scope. Compared against a reducing target intensity (the "compliance line") that drops year-on-year. Non-compliance is penalised per gram of GHG above the target, multiplied by total energy consumed.
+
+Renewable fuels (biofuels with ISCC certification) get a multiplier — they reduce GHG intensity proportionally to their share of energy mix, which can move a non-compliant vessel into compliance without operational changes.
+
+---
+
+## IMO DCS
+
+The annual fuel consumption reporting regime. Produces a single annual report per vessel with per-fuel-type consumption, distance, and hours under way. Less commercially consequential than the other regimes but a hard regulatory deadline.
+
+The pipeline tracks the data integrity for the DCS report — same data quality requirements that the [consumption log validator](/skills/validate-consumption-log-data) checks before submission.
+
+---
+
+## Fleet rating dashboard
+
+The fleet view assembles every vessel's CII rating in one table:
+
+```text
+Vessel    Type           DWT      CII attained   CII required   Ratio   Rating
+POSUN     Bulker         52,000   5.18           5.34           0.97    C
+AQUILA    Tanker         115,000  3.65           3.74           0.98    C
+OCEAN     Container      82,000   8.42           7.95           1.06    D
+NEXUS     Tanker         58,000   4.21           4.45           0.95    C
+…
+```
+
+A reviewer scans for the vessels approaching D / E — those need active management for the rest of the year. The fleet view also surfaces structural patterns: vessels of the same type running consistently above CII required points to a fleet-wide operational issue, not vessel-by-vessel.
+
+---
+
+## Implementation reference
+
+CII attained calculation, condensed:
+
+```python
+def cii_attained(voyages, vessel_type, dwt):
+    """CII attained = total CO2 / (capacity * total distance)."""
+    total_co2 = 0.0
+    total_distance_nm = 0.0
+
+    for v in voyages:
+        for fuel_type, mass_t in v["fuel_consumed"].items():
+            cf = CARBON_FACTORS[fuel_type]            # gCO2 / g fuel
+            total_co2 += mass_t * 1_000_000 * cf      # to grams
+        total_distance_nm += v["distance_nm"]
+
+    capacity = dwt if vessel_type != "passenger" else gt
+    return total_co2 / (capacity * total_distance_nm)
+```
+
+CII rating from attained vs required:
+
+```python
+def cii_rating(attained, required):
+    ratio = attained / required
+    if ratio <= 0.86: return "A"
+    if ratio <= 0.94: return "B"
+    if ratio <= 1.06: return "C"
+    if ratio <= 1.18: return "D"
+    return "E"
+```
+
+The CII trajectory analysis tracks attained through the operating year and projects year-end using the linear-projection method above.
+
+---
+
+## Worked example
+
+`MV OCEAN`, 82,000 DWT container, end-of-April review (4 months into operating year):
+
+| Metric | Value |
+|--------|-------|
+| YTD CO₂ | 14,820 tonnes |
+| YTD distance | 38,400 nm |
+| YTD CII attained | 8.92 (g CO₂ / DWT-nm × something) |
+| CII required (2026) | 7.95 |
+| YTD ratio | 1.12 → **D-band** |
+| Linear forecast | 1.16 → **D-band** but close to E (1.18) |
+| Operational forecast (with planned voyages) | 1.18 → **E-band threshold** |
+
+EU ETS YTD obligation: 4,180 EUAs (~€352k at €84/EUA).
+EU ETS year-end forecast: 12,500 EUAs (~€1.05M).
+
+FuelEU GHG intensity YTD: 86.8 gCO₂eq/MJ vs target 89.3 → currently compliant by margin.
+
+**Verdict**: HIGH-CRITICAL on CII trajectory. The operational forecast crosses the E threshold. Three actions become candidates:
+
+1. **Slow-steaming**: reducing average speed by 1 knot reduces CO₂ per nm meaningfully. Cross-references the [voyage pipeline](/skills/voyage) for CP impact (some CPs allow it).
+2. **Bunker mix shift**: switching VLSFO portion to MGO improves combustion efficiency but increases mass slightly — net carbon impact is marginal. Better to look at LNG dual-fuel if available.
+3. **Operational efficiency**: hull cleaning, propeller polishing — engineering changes that reduce required power for the same speed.
+
+The pipeline:
+
+1. Routes to the Operations / Commercial team — operational change candidates.
+2. Routes to the [ME performance pipeline](/skills/me-performance) for the engineering side (hull fouling? Engine SFOC?).
+3. Generates the EU ETS purchase plan at the projected year-end demand.
+
+---
+
+## What the senior review contains
+
+1. **Headline ratings** — current and projected CII, EU ETS YTD and forecast, FuelEU compliance margin.
+2. **CII trajectory** — chart with attained-through-time, projected year-end, rating bands shaded.
+3. **Per-voyage EEOI** — operational efficiency metric for trending.
+4. **EU ETS obligation** — running EUA demand, projected year-end, financial impact at current market.
+5. **FuelEU intensity** — GHG intensity vs target, biofuel share if any.
+6. **IMO DCS data quality** — completeness check before annual submission.
+7. **Operational change candidates** — modelled impact of slow-steaming, bunker shift, hull-cleaning.
+8. **Recommendations** — prioritised by impact and feasibility.
+9. **Escalation decision** — to whom, and why.
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| CII rating projecting E with $\geq 6$ months remaining | CRITICAL |
+| CII rating projecting D for third consecutive year | CRITICAL |
+| FuelEU intensity above target by mid-year | HIGH |
+| EU ETS obligation forecast variance &gt;25% from plan | HIGH |
+| IMO DCS data integrity gaps in submitted reports | HIGH |
+
+---
+
+## Why all five together
+
+A vessel can have A-rated CII and still fail FuelEU if its fuel mix is heavy. A vessel passing FuelEU can be commercially exposed on EU ETS price spikes. A clean IMO DCS report doesn't help if the underlying CII rating is dropping. The five regimes operate independently and have to be tracked together — the pipeline runs all five computations on every refresh.
+
+<Note>
+The single most consequential improvement most fleets can make on CII is hull cleaning frequency. A fouled hull adds 5–10% to the power required for the same speed; that translates directly to attained CII. The pipeline cross-references hull condition and propeller polishing dates so the operational levers are visible.
+</Note>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Source templates" icon="code">
+    Emission-monitoring suite — per-voyage EEOI, CII data with historical and forecast trajectory, and the fleet-wide CII rating view.
+  </Card>
+  <Card title="Microapp: Emissions" icon="cloud" href="/microapps/emissions/introduction">
+    Live dashboard with all five regimes — the user-facing surface for the same data.
+  </Card>
+  <Card title="Related: Voyage" icon="route" href="/skills/voyage">
+    Voyage performance and slow-steaming decisions are CII-relevant.
+  </Card>
+  <Card title="Related: Fuel oil" icon="gas-pump" href="/skills/fuel-oil">
+    Fuel mix decisions are emissions decisions — bunker grade affects CII, EU ETS, and FuelEU.
+  </Card>
+</CardGroup>

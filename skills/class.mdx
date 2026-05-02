@@ -1,0 +1,386 @@
+---
+title: "Class Society Surveillance"
+description: "End-to-end pipeline that scrapes class society portals, classifies surveys and certificates by status, scores PSC detention risk, and produces a senior compliance review."
+---
+
+<Frame caption="Class Society Surveillance — sources, download skill, immutable evidence log, analysis skill, and senior compliance output in one traceable workflow.">
+  <img src="/images/hero/class-society-surveillance-whitepaper.png" alt="Class Society Surveillance pipeline showing source portals and documents, download skill, evidence log, analysis skill, and senior compliance output" style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
+</Frame>
+
+## Executive summary
+
+Maritime class compliance is the single largest source of operational risk a Technical Superintendent manages. A missed survey can trigger a Condition of Class. An overdue Continuous Machinery Survey item can escalate into a hold. A statutory certificate that lapses at sea is a vessel detention waiting to happen at the next port.
+
+The **Class Society Surveillance** pipeline keeps every vessel's class state visible, current, and audit-ready. It scrapes the class society's own portal — ABS today, with the same pattern extending to BV, DNV, LR, CCS, KR, RINA, NK, IRS — pulls the structured data behind every page, captures a screenshot of each page, then runs a battery of analyses that classify surveys and certificates against operating thresholds and produce a senior expert review.
+
+The pipeline is designed so every number on the review traces back to a timestamped portal snapshot. Class disputes are won on documentation, not arguments.
+
+## Architecture
+
+```
+       ┌─────────────────────────────────────┐
+       │  Class society portal (ABS, BV, …)  │
+       └──────────────┬──────────────────────┘
+                      │ XHR responses + page screenshots
+                      ▼
+       ┌─────────────────────────────────────┐
+       │   Stage 1 — Data collection         │
+       │   Browser automation (Playwright)   │
+       │   Pages: vessels list, overview,    │
+       │   certificates, surveys, findings,  │
+       │   assets                            │
+       └──────────────┬──────────────────────┘
+                      │ structured JSON + PNGs
+                      ▼
+       ┌─────────────────────────────────────┐
+       │   Stage 2 — Analysis battery        │
+       │   • Certificate status              │
+       │   • Survey due dates                │
+       │   • Conditions of Class & memos     │
+       │   • CMS items                       │
+       │   • Docking survey                  │
+       │   • Next periodical survey          │
+       │   • Survey dashboard                │
+       └──────────────┬──────────────────────┘
+                      │ classifications + scores
+                      ▼
+       ┌─────────────────────────────────────┐
+       │   Stage 3 — Expert review           │
+       │   PSC detention-risk verdict        │
+       │   Recommended actions               │
+       │   Escalation to TSI if required     │
+       └─────────────────────────────────────┘
+```
+
+---
+
+## Stage 1 — Data collection
+
+### Where the data comes from
+
+Each major class society has a dedicated portal scraper. The pipeline reads from the society directly — no ERP intermediary, no email parsing — so the snapshot matches what the society itself shows.
+
+| | Class society | Coverage |
+|---|---------------|----------|
+| <img src="/images/class-societies/abs.jpg" alt="ABS" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **ABS** — American Bureau of Shipping | Surveys, certificates, findings, assets |
+| <img src="/images/class-societies/bv.svg" alt="Bureau Veritas" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Bureau Veritas (BV)** | Surveys, certificates, findings, conditions of class |
+| <img src="/images/class-societies/dnv.svg" alt="DNV" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **DNV** — Det Norske Veritas | Surveys, certificates, findings, asset register |
+| <img src="/images/class-societies/lr.svg" alt="Lloyd's Register" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Lloyd's Register (LR)** | Surveys, certificates, findings, CMS items |
+| <img src="/images/class-societies/nk.svg" alt="ClassNK" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **ClassNK** — Nippon Kaiji Kyokai (NK) | Surveys, certificates, findings |
+| <img src="/images/class-societies/ccs.svg" alt="CCS" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **CCS** — China Classification Society | Surveys, certificates, findings |
+| <img src="/images/class-societies/kr.png" alt="Korean Register" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **KR** — Korean Register | Surveys, certificates, findings |
+| <img src="/images/class-societies/irs.png" alt="Indian Register of Shipping" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **IRS** — Indian Register of Shipping | Surveys, certificates, findings |
+| <img src="/images/class-societies/rina.svg" alt="RINA" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **RINA** (Italian classification society) | Surveys, certificates (date-precedence rules differ — see below) |
+
+When a vessel is dual-classed (class with two societies for different statutory items), the pipeline reads both and reconciles by certificate type. The fleet view always renders the primary class first.
+
+<Note>
+Class society logos shown are sourced from Wikimedia Commons / public press kits and used under nominative trademark fair use to identify the respective organisations. Each logo remains the trademark of its owner.
+</Note>
+
+### What gets captured
+
+| Page | Data |
+|------|------|
+| Vessels list | Fleet roster as the class society sees it |
+| Overview | Class status, register details, key dates |
+| Certificates | Statutory and class certificates with issue / expiry / extension dates and downloadable PDFs |
+| Surveys | Due dates, completion status, window periods |
+| Findings | Open and closed findings — Conditions of Class, Memoranda, Notes, Recommendations |
+| Continuous Machinery | Per-component CMS items with last completed and next due dates |
+| Assets | Equipment register and condition flags |
+
+A timestamped screenshot is captured alongside each page so a reviewer can verify the recorded numbers came from the live portal.
+
+### Acquisition flow
+
+<Steps>
+  <Step title="Verify portal reachability">
+    Confirms the class portal is up before launching the scraper. A failed health check stops the run rather than producing partial evidence.
+  </Step>
+  <Step title="Open portal in foreground browser">
+    The user's Chrome opens to the portal. Useful for live demos and for spot-checking the data the scraper sees.
+  </Step>
+  <Step title="Run headless scraper in parallel">
+    Playwright walks the portal pages in a separate browser context. Every page's API call is intercepted; the structured response and a full-page screenshot are saved.
+  </Step>
+  <Step title="Bundle into evidence record">
+    JSON + screenshots land in a single timestamped folder. The case file is updated so any reviewer or analyzer knows new evidence is available.
+  </Step>
+</Steps>
+
+### Output structure
+
+```text
+case_files/vessels/{IMO}/class_surveys/
+├── raw_data/
+│   └── abs_2026-04-30.json          # all scraped page responses
+├── documents/
+│   └── certificates/*.pdf           # downloaded certificate copies
+├── screenshots/
+│   ├── 01_vessels_list.png
+│   ├── 02_overview.png
+│   ├── 03_certificates.png
+│   ├── 04_surveys.png
+│   ├── 05_findings.png
+│   └── 06_assets.png
+└── activity_log.jsonl               # append-only run log
+```
+
+<Note>
+Every collection is append-only. Re-running the scraper never overwrites earlier snapshots — historical class state is preserved.
+</Note>
+
+---
+
+## Stage 2 — Analysis battery
+
+The scraper produces evidence; eight analysis templates turn that evidence into actionable intelligence. Each template is independently runnable but they share a common set of primitives — date parsing, status classification, age scoring — so the verdicts compose cleanly into the final review.
+
+### 2.1 Certificate status
+
+Every statutory and class certificate is classified against an effective expiry date. The effective date is the maximum of the issued expiry and any extension on file:
+
+$$
+D_\text{effective} = \max(D_\text{expiry}, \; D_\text{extension})
+$$
+
+The remaining validity in days drives the verdict:
+
+$$
+\Delta_\text{days} = D_\text{effective} - D_\text{today}
+$$
+
+| Status | Condition | Colour |
+|--------|-----------|--------|
+| Overdue | $\Delta_\text{days} \leq 0$ | red |
+| Due in N days | $0 < \Delta_\text{days} \leq 90$ | orange |
+| In Order | $\Delta_\text{days} > 90$ | green |
+| Full term — flag-issued | Panama-flag certificates in BWMC / IHM / ISSC categories that are administratively flag-extended | green |
+
+#### Code snapshot
+
+```python
+# Effective expiry is the later of expiry and any extension
+max_date = max(
+    pd.to_datetime(extension_date, errors="coerce"),
+    pd.to_datetime(expiry_date,    errors="coerce"),
+    key=lambda x: x if pd.notnull(x) else datetime.min,
+)
+
+days_diff = (max_date - current_date).days
+
+if days_diff is None:
+    status = {"status": "In Order", "color": "green"}
+elif days_diff <= 0:
+    name = cert.get("certificateName", "").lower()
+    if any(t in name for t in ("ballast", "bwm", "hazardous", "ihm",
+                                "security", "issc")) and "panama" in vessel_flag:
+        status = {"status": "Full term certificate is issued by the flag",
+                  "color": "green"}
+    else:
+        status = {"status": "Overdue", "color": "red"}
+elif days_diff <= 90:
+    status = {"status": f"Due in {days_diff} days", "color": "orange"}
+else:
+    status = {"status": "In Order", "color": "green"}
+```
+
+The flag-specific override matters — a Panama-flagged vessel with a fully flag-issued BWMC is technically compliant even when the class certificate looks expired in the portal. Hard-coding "expired = overdue" without that nuance produces false positives that erode trust in the review.
+
+### 2.2 Survey due dates
+
+Surveys carry an extra dimension certificates don't: a **window period**. A vessel is in compliance if a survey is completed within the window, even if the formal due date has passed.
+
+The effective date for a survey:
+
+$$
+D_\text{effective} = \max(D_\text{due}, \; D_\text{postponed}) \;\;\text{or}\;\; D_\text{window\_end}
+$$
+
+Survey verdicts add an "In Window Period" state that certificates don't have:
+
+| Status | Condition |
+|--------|-----------|
+| In Window Period | $D_\text{window\_start} \leq D_\text{today} \leq D_\text{window\_end}$ |
+| Overdue | $\Delta_\text{days} \leq 0$ |
+| Due in N days | $0 < \Delta_\text{days} \leq 90$ |
+| In Order | $\Delta_\text{days} > 90$ |
+
+#### Code snapshot
+
+```python
+def calculate_survey_status(surveys):
+    survey_list = []
+    for survey in surveys:
+        due_date          = parse_date(survey.get("dueDate"))
+        window_start_date = parse_date(survey.get("windowStartDate"))
+        window_end_date   = parse_date(survey.get("windowEndDate"))
+        postponed_date    = parse_date(survey.get("extendedDate"))
+
+        # Effective date — latest of due / postponed, fallback to window end
+        dates = [d for d in (due_date, postponed_date) if d]
+        max_date = max(dates) if dates else window_end_date
+        days_diff = (max_date - current_date).days if max_date else None
+
+        if window_start_date and window_end_date \
+           and window_start_date <= current_date <= window_end_date:
+            status = {"status": "In Window Period", "color": "orange"}
+        elif days_diff is None:
+            status = {"status": "In Order", "color": "green"}
+        elif days_diff <= 0:
+            status = {"status": "Overdue", "color": "red"}
+        elif days_diff <= 90:
+            status = {"status": f"Due in {days_diff} days", "color": "orange"}
+        else:
+            status = {"status": "In Order", "color": "green"}
+```
+
+### 2.3 Conditions of Class &amp; findings
+
+Findings are classified by the **header** they fall under — Conditions of Class are operationally restrictive; Memoranda and Notes are advisory. The classifier reads the criticality field and routes the finding:
+
+```python
+def determine_header(row):
+    criticality = row["criticality"]
+    if pd.isna(criticality):
+        return "Notes"
+    s = str(criticality).strip()
+    if "CoC" in s:
+        return "CoC"
+    sl = s.lower()
+    if "exempti" in sl:    return "Exemption"
+    if "memorand" in sl:   return "Memoranda"
+    if "recommend" in sl:  return "Recommendation"
+    return "Notes"
+```
+
+Every finding gets the same expiry-style classification (overdue / in order) using its own due and extended dates. Open Conditions of Class with a near deadline are the highest-weight contributor to detention risk.
+
+### 2.4 Continuous Machinery Survey (CMS)
+
+CMS items are credited if they were last completed within a 365-day window. Otherwise the item is classified by its remaining days, with class-specific date sources:
+
+$$
+\text{CMS status}(c) = \begin{cases}
+\text{Credited} & \text{if } 1 \leq (D_\text{today} - D_\text{lastDate}) \leq 365 \\
+\text{Overdue}  & \text{if } \Delta_\text{days} \leq 0 \\
+\text{Due in } N & \text{if } 0 < \Delta_\text{days} \leq 90 \\
+\text{In Order} & \text{otherwise}
+\end{cases}
+$$
+
+Different class societies use different precedence rules — RINA only honours the original due date, while NK / LR / CCS / IRS / BV / ABS / KR / DNV all consider the extended date if present. The script encodes that per-society logic explicitly.
+
+### 2.5 Docking and next periodical survey
+
+These are special-case surveys that drive dry-dock planning. The same windowing maths applies, but the verdict carries operational weight: an imminent docking survey couples to charter party off-hire, drydock-yard slot booking, and SIRE / vetting calendars.
+
+### 2.6 Survey dashboard rollup
+
+The final step assembles a vessel-level dashboard combining every analysis above into a single status grid: how many overdue, how many due-soon, how many in-window, count per class society. This is what populates the executive summary of the senior review.
+
+---
+
+## Stage 3 — PSC detention-risk score
+
+Open findings, overdue items, and impending CoC deadlines compose into a weighted detention-risk composite:
+
+$$
+R_\text{psc} = w_1 S_\text{overdue} + w_2 F_\text{critical} + w_3 C_\text{cond} + w_4 R_\text{recur} + w_5 P_\text{psc}
+$$
+
+where:
+
+- $S_\text{overdue}$ — count of surveys overdue
+- $F_\text{critical}$ — open critical findings
+- $C_\text{cond}$ — Conditions of Class within 30 days
+- $R_\text{recur}$ — recurring deficiency themes (3+ findings on same system)
+- $P_\text{psc}$ — recent PSC inspection density at the next port's regime
+
+The composite maps to LOW / MEDIUM / HIGH / CRITICAL. HIGH or CRITICAL routes the case automatically to the Technical Superintendent.
+
+---
+
+## Worked example
+
+**Vessel**: `MV POSUN` (IMO 9388340), ABS classed, Panama flag.
+
+After a refresh:
+
+| Domain | Findings |
+|--------|----------|
+| Certificates | 14 in order, 1 overdue (BWMC — covered by flag full-term, classified green), 2 due within 90 days |
+| Surveys | 8 in order, 1 overdue (Annual hull — postponed once already), 1 in window period |
+| CoC / findings | 2 Conditions of Class open: one due in 18 days (steering gear test), one in 45 days |
+| CMS | 2 items credited within last 12 months, 1 overdue (turbocharger inspection) |
+
+The detention-risk composite scores **HIGH** — driven primarily by the overdue annual hull survey and the 18-day CoC. The pipeline:
+
+1. Tags the run with `escalation_required: true`
+2. Updates the case to `awaiting-tsi-review`, priority CRITICAL
+3. Sends an A2A message to the TSI inbox with links to the snapshot, the dashboard, and the recommended actions
+
+**Recommended actions** (from the analyzer):
+
+1. Schedule annual hull survey at next port — co-ordinate surveyor attendance window. Estimated cost USD 4–6k.
+2. Steering-gear function test — workshop attendance required before 2026-05-19.
+3. Turbocharger CMS inspection — book superintendent attendance at next docking window (28 days out).
+
+---
+
+## Output deliverables
+
+The senior review produced by the analyzer contains:
+
+- **Executive summary** — overall class status and headline counts
+- **Survey status table** — per-survey verdict, due date, window
+- **Certificate portfolio** — every certificate with effective expiry and verdict
+- **Findings analysis** — distribution by severity, age, recurring themes
+- **Conditions of Class** — deadlines and remediation plan
+- **CMS items** — credited / overdue / due-soon list
+- **PSC detention-risk** — score, contributing factors, mitigation
+- **Recommendations** — prioritised by deadline and impact, with cost estimate
+- **Escalation decision** — auto-routed to TSI when triggers met
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Any survey overdue | CRITICAL |
+| Condition of Class within 30 days unresolved | CRITICAL |
+| Open critical finding older than 60 days | HIGH |
+| Recurring deficiency theme (3+ findings on same system) | HIGH |
+| CMS item overdue | HIGH |
+| Class status downgraded | CRITICAL |
+
+---
+
+## Why a script-driven pipeline
+
+Surveys are quantitative — dates and rules. Threshold logic, age clustering, and the per-society precedence rules all live in deterministic Python. The language model interprets the result and writes the review; it never recomputes the verdicts. That keeps reviews **consistent across vessels and audits**, **traceable** (every figure in the review traces to a date in the snapshot), and **cheap** (analysis is a script, not a model call).
+
+<Warning>
+Manual class reviews are where errors compound. A surveyor types the wrong date into one cell of a spreadsheet and the next four reviews inherit the mistake. A script-based pipeline reads the portal, computes the verdict, and shows its working — every number is reproducible from the snapshot.
+</Warning>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Source skill: class-society-data" icon="ship">
+    Browser scraper that drives the portal and bundles the snapshot.
+  </Card>
+  <Card title="Source skill: class-society-analyzer" icon="microscope">
+    Senior agent that runs the analysis battery and writes the review.
+  </Card>
+  <Card title="Templates: class_analysis/" icon="code">
+    Eight analysis templates: certificate status, survey due dates, conditions of class, CMS, docking, periodical, dashboard.
+  </Card>
+  <Card title="Related: certificates" icon="file-certificate" href="/skills/certificates-analyzer">
+    Statutory and trade certificates not covered by class.
+  </Card>
+</CardGroup>
