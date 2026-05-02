@@ -1,49 +1,219 @@
 ---
-title: "Outlook Email Sync"
-description: "Syncs an Outlook inbox into local storage and a searchable database — emails, attachments, threads, all available offline."
+title: "Email Surveillance"
+description: "Sync Outlook inbox into a searchable local store — then track follow-up emails per topic so a Technical Superintendent always knows what's been chased and when."
 ---
 
-## What it does
+The Outlook inbox is where the conversations live: cargo nominations, charterer questions, supplier disputes, class society reminders, flag administration follow-ups, master-to-shore reports, near-miss escalations. The data inside it is what the rest of the pipeline reads against — but only if it's accessible.
 
-The **Outlook Email Sync** skill pulls every email from a configured Outlook inbox into local storage and a searchable database. Each message and its attachments land on disk; a SQLite index makes the corpus instantly searchable; threads are reconstructed automatically.
+The **Email Surveillance** pipeline does two jobs:
 
-Once synced, agents can search, classify, and reply to emails without round-tripping to Outlook every time.
+1. **Sync** — pull the inbox into a local searchable store so other pipelines can reference it without hitting Outlook every query.
+2. **Topic tracking** — for the recurring topics the fleet generates email about (PMS, class, SIRE/CDI, technical forms, COC dispensations, MoM, TMSA, performance, fleet-wide notifications), track the latest mail sent and the pending follow-ups.
 
-## When to use it
+---
 
-- "Sync emails"
-- "Fetch new emails"
-- "Get the latest inbox"
-- "Populate threads"
-- "Set up the email pipeline"
+## Where the data comes from
 
-## What it does on each run
+| Source | What it provides |
+|--------|------------------|
+| **Microsoft Outlook** (via Graph API) | Email metadata, body, attachments, folder labels, conversation linkage |
+| **MSAL token cache** | Authentication for delta-query reads |
+| **Local SQLite index** | The synced corpus — written by this pipeline, read by every other |
 
-1. Authenticates with Microsoft Graph using the existing token cache.
-2. Fetches new messages since the last sync.
-3. Downloads attachments alongside each email.
-4. Indexes everything in SQLite — sender, recipients, subject, body, dates, attachments.
-5. Rebuilds threads so reply chains are linked together.
-6. Marks processed emails so the next sync only touches new mail.
+The pipeline is the source-of-truth for email content downstream. Other pipelines query the local index, never Outlook directly.
 
-## What it captures
+---
 
-- Full message body (HTML and text)
-- Subject, sender, recipients (To, CC, BCC), dates
-- Attachments downloaded to disk
-- Thread / conversation linkage
-- Folder and category labels
+## Sync
 
-## Why a local database
+Outlook isn't a useful real-time queryable surface — Microsoft Graph API rate limits, latency, and the requirement to authenticate per query make it slow and expensive. The sync turns the live inbox into a local SQLite index plus on-disk attachments.
 
-Searching Outlook over Graph for every query is slow and rate-limited. A local indexed copy means:
+| Layer | Stored | Used for |
+|-------|--------|----------|
+| Email metadata | sender, recipients, subject, dates, folder, labels | Search, classification |
+| Email body | HTML and plain-text | Content extraction, entity recognition |
+| Attachments | PDFs, Excel files, screenshots | Read by other skills (e.g. [PDF to markdown](/skills/pdf-to-markdown)) |
+| Thread linkage | conversation-id grouping | Reply-chain reconstruction |
+| Sync state | last sync timestamp, sequence number | Incremental sync — no double-fetching |
 
-- Sub-second search across the entire inbox
-- Offline analysis (classification, summarisation, entity extraction)
-- Audit trail of what was processed and when
-- Clean inputs for downstream skills (case extraction, vendor invoice processing, sentiment monitoring)
+A typical fleet inbox has 50,000–200,000 emails per year. The sync handles incremental updates only — first run is heavy, every subsequent run pulls only the deltas.
 
-## Related skills
+---
 
-- **search-indexed-documents** — search engine that runs over the indexed email corpus
-- **maritime-report-generator** — consumes incident emails when generating investigation reports
+## Topic tracking
+
+Beyond raw sync, the pipeline tracks 20 recurring email topics. Each topic surfaces:
+
+> *"When was the last mail sent on this topic, what did it say, and what's the response status?"*
+
+The topics, organised by audience:
+
+<AccordionGroup>
+  <Accordion title="Class &amp; statutory" icon="ship">
+    - **Class status** — class society correspondence: surveys, conditions, certificate updates
+    - **CoC and dispensation** — Conditions of Class and dispensation requests / approvals
+    - **Medical chest certificate** — annual certificate correspondence
+  </Accordion>
+  <Accordion title="Vetting &amp; commercial" icon="scale-balanced">
+    - **SIRE and CDI** — current inspection cycle correspondence
+    - **SIRE / CDI status due in 2 months** — pre-inspection preparation
+    - **VIR status fleet-wise** — charterer inspections across the fleet
+    - **VIR status due in 1 month** — pre-inspection preparation
+    - **TMSA mail** — Tanker Management and Self-Assessment correspondence
+  </Accordion>
+  <Accordion title="Technical &amp; operational" icon="wrench">
+    - **PMS mail** — maintenance correspondence with vessels
+    - **Performance mail** — engine / vessel performance correspondence
+    - **Technical form submission status** — chasing late forms
+    - **Missing technical form status** — escalations on never-submitted forms
+    - **LO shore analysis** — lubricant lab correspondence
+    - **Consumption log review status** — emissions data quality follow-up
+    - **LO Nissen Kaiun report status** — owner-specific report correspondence
+  </Accordion>
+  <Accordion title="Operational regulatory" icon="anchor">
+    - **Vessels calling Paris MoU ports** — pre-inspection prep mail to masters
+    - **Vessels calling Australia** — pre-inspection prep mail (AMSA)
+    - **MoM mail** — Minutes of Meeting follow-ups
+  </Accordion>
+</AccordionGroup>
+
+Each tracker answers the same three questions in the same shape:
+
+```python
+def topic_status(topic, emails, today):
+    """For one tracked topic, return latest send + response state."""
+    topic_emails = filter_by_subject_pattern(emails, topic.patterns)
+    if not topic_emails:
+        return {"status": "Never sent", "last_sent": None, "follow_up_due": False}
+
+    latest = max(topic_emails, key=lambda e: e["sent_date"])
+    days_since = (today - latest["sent_date"]).days
+
+    response = find_response_in_thread(latest["conversation_id"])
+    follow_up_due = (response is None and days_since > topic.response_window_days)
+
+    return {
+        "status":          "Awaiting response" if not response else "Responded",
+        "last_sent":       latest["sent_date"],
+        "days_since":      days_since,
+        "follow_up_due":   follow_up_due,
+        "subject":         latest["subject"],
+        "preview":         latest["body_preview"],
+    }
+```
+
+A reviewer scanning the topic dashboard sees, at a glance, which conversations have gone quiet and need a chase.
+
+---
+
+## Data model
+
+Inside the SQLite index:
+
+```sql
+-- Email metadata
+CREATE TABLE emails (
+    id              TEXT PRIMARY KEY,         -- Outlook conversation-message id
+    conversation_id TEXT,                     -- Thread anchor
+    sender          TEXT,
+    recipients      TEXT,                     -- JSON array
+    cc              TEXT,                     -- JSON array
+    subject         TEXT,
+    sent_date       TEXT,
+    received_date   TEXT,
+    body_html       TEXT,
+    body_text       TEXT,
+    folder          TEXT,
+    labels          TEXT,                     -- JSON array
+    has_attachments INTEGER
+);
+
+CREATE INDEX idx_conversation ON emails(conversation_id);
+CREATE INDEX idx_sender       ON emails(sender);
+CREATE INDEX idx_sent_date    ON emails(sent_date);
+CREATE INDEX idx_subject      ON emails(subject);
+
+-- Attachments stored on disk; this table indexes them
+CREATE TABLE attachments (
+    id        TEXT PRIMARY KEY,
+    email_id  TEXT REFERENCES emails(id),
+    filename  TEXT,
+    size      INTEGER,
+    path      TEXT,                            -- file system path
+    mime_type TEXT
+);
+
+-- Sync bookkeeping
+CREATE TABLE sync_state (
+    folder       TEXT PRIMARY KEY,
+    last_sync_at TEXT,
+    delta_link   TEXT                          -- Graph API delta token
+);
+```
+
+---
+
+## What the senior review (or daily digest) contains
+
+For an operations or technical superintendent, the daily digest is the most useful surface:
+
+1. **New mails of interest** — count, sender breakdown, top subjects.
+2. **Topic dashboard** — every tracked topic with status (Responded / Awaiting / Never sent / Follow-up due), latest sent date, days-since.
+3. **Follow-ups due** — the focused list: topics that have gone quiet beyond their response window.
+4. **Attachments to process** — PDFs, Excels, BDNs, lab reports, certificates received but not yet routed to other pipelines.
+5. **Thread alerts** — conversations that grew unusually fast (10+ replies in 24h often means an incident).
+6. **Fleet-wide patterns** — the same topic chased across multiple vessels in the same week (procedural drift across the fleet).
+
+---
+
+## Cross-pipeline integration
+
+The email index is read by other pipelines:
+
+- [Class](/skills/class) reads class-society correspondence to surface dispensations and survey responses.
+- [Compliance](/skills/compliance) reads SIRE / CDI / VIR correspondence to track operator-response status.
+- [Forms](/skills/forms) reads form-submission chasing emails to distinguish "engineer didn't submit" from "engineer submitted to wrong recipient".
+- [Maritime report generator](/skills/maritime-report-generator) pulls incident-related email threads when generating investigation reports.
+
+The pattern is consistent — pipelines query the email index for context, never the live inbox.
+
+---
+
+## Authentication and rate-limit handling
+
+Microsoft Graph API enforces tenant-level rate limits (10,000 requests / 10 min default). The sync respects the limit by using delta queries (only fetching changed items) and adaptive back-off when the API returns 429 Too Many Requests.
+
+Auth uses the existing MSAL token cache. The pipeline does not store credentials directly — token refresh follows the standard MSAL flow and the cache is reused across sync runs.
+
+---
+
+## What the pipeline does **not** do
+
+- It does not send emails on behalf of users.
+- It does not auto-archive or delete.
+- It does not modify mail content in place.
+
+The pipeline is read-only. Any outbound mail is composed and sent through other tooling (CLI helpers, dedicated send skills) that share the same auth but route writes through a different path. This separation is intentional — accidentally archiving 50,000 emails through a sync bug would be unrecoverable.
+
+<Note>
+The single most consequential improvement most fleets can make to their email-driven processes is **subject-line standardisation**. The topic-tracking templates rely on subject patterns; a pre-agreed prefix per topic ("[CLASS]", "[PMS-CHASE]", "[VIR-PRE]") increases tracker recall from ~70% to &gt;95%.
+</Note>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Templates: email-processing" icon="code">
+    20 templates covering the recurring topic trackers — class, PMS, SIRE/CDI, VIR, TMSA, technical forms, performance, MoM, AMSA / Paris MoU, and more.
+  </Card>
+  <Card title="Related: Class" icon="ship" href="/skills/class">
+    Class correspondence is read out of this index.
+  </Card>
+  <Card title="Related: Compliance" icon="scale-balanced" href="/skills/compliance">
+    SIRE / CDI / VIR response tracking pulls from email threads here.
+  </Card>
+  <Card title="Related: Maritime Report Generator" icon="file-lines" href="/skills/maritime-report-generator">
+    Investigation reports cite specific email threads — they're sourced from this index.
+  </Card>
+</CardGroup>

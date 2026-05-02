@@ -1,0 +1,240 @@
+---
+title: "Water Treatment Surveillance"
+description: "Boiler, cooling, potable and FWG chemistry — parameter compliance, contamination risk, and chemical-ROB consumption tracking."
+---
+
+Steel and water are not a stable combination. The water on a vessel is a managed chemistry experiment that runs continuously: boiler water has to stay alkaline enough to prevent corrosion but not so alkaline it deposits scale; cooling water has to stay treated against bacteria; potable water has to stay safe to drink; the FWG output has to stay within salinity limits or the heat exchangers downstream will pit.
+
+The **Water Treatment Surveillance** pipeline reads the boiler and cooling water test forms, the chemical inventory, the noon-report water-test entries, and the FWG telemetry — and produces a parameter-by-parameter view of the four water systems on board, plus the chemical-stock view that tells a Technical Superintendent whether the vessel can continue treatment without re-supply.
+
+---
+
+## Where the data comes from
+
+| Source | What it provides |
+|--------|------------------|
+| **Vessel-side test forms** | Boiler / cooling / potable / FWG chemistry readings filed by Chief Engineer |
+| **Chemical inventory register (ERP)** | Per-chemical ROB, supplier, daily dosing |
+| **Noon report (water tests)** | FWG output salinity, additional spot readings |
+| **FWG telemetry** | Continuous salinity / conductivity logging where instrumented |
+
+Chemicals are sourced from any of the major marine water-treatment suppliers:
+
+| | Supplier | Specialty |
+|---|----------|-----------|
+| <img src="/images/brands/drew-marine.svg" alt="Drew Marine" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Drew Marine** | Boiler, cooling, fuel-treatment chemicals |
+| <img src="/images/brands/wilhelmsen.svg" alt="Wilhelmsen" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> <img src="/images/brands/unitor.svg" alt="Unitor" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Wilhelmsen / Unitor** | Boiler, cooling, fuel-treatment, cleaning chemicals |
+| <img src="/images/brands/vecom.svg" alt="Vecom" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Vecom** | Boiler and cooling water treatment |
+| <img src="/images/brands/chevron-marine.svg" alt="Chevron Marine" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Chevron Marine** | Boiler and cooling water treatment |
+
+The pipeline reads chemical-supplier acknowledgements (delivery + spec sheet) and reconciles them against the inventory.
+
+---
+
+## The four water systems
+
+| System | Critical parameters | Failure mode |
+|--------|---------------------|--------------|
+| **Boiler water** | pH, conductivity, hardness, phosphate, chloride | Tube corrosion, scale, foaming |
+| **Cooling water** | pH, conductivity, nitrite, chloride, microbial | General corrosion, biofilm, seawater ingress |
+| **Potable water** | Chlorine, hardness, microbial, salinity | Health hazard, scale, taste |
+| **FWG output** | Salinity, conductivity | Heat exchanger pitting downstream |
+
+Each system has its own spec range, its own dosing protocol, and its own consumption profile. The pipeline tracks each independently then integrates the findings into the senior review.
+
+---
+
+## Parameter classification
+
+For each parameter the analyzer compares the latest reading against the maker / equipment-specific spec. Three tiers:
+
+| Tier | Condition |
+|------|-----------|
+| **OK** | Within spec, trend stable |
+| **WARNING** | Outside spec but within wider safety envelope |
+| **CRITICAL** | Outside safety envelope, or step jump from previous reading |
+
+The wider safety envelope matters because spec ranges are usually conservative. A boiler at slightly elevated chloride is something to watch; a boiler at chloride three times the spec is a corrosion event in progress.
+
+---
+
+## Equipment-damage risk mapping
+
+Specific patterns map to specific risks:
+
+<AccordionGroup>
+  <Accordion title="Boiler chloride above limit" icon="droplet">
+    Saltwater contamination of boiler feedwater. Causes pitting corrosion of tubes; in severe cases leads to tube failure and boiler shutdown. Source is usually a feedwater contamination upstream — condenser leak, distillate carryover, or salt-water bunker fill error.
+  </Accordion>
+  <Accordion title="Cooling chloride above limit" icon="water">
+    Seawater ingress into a closed cooling-water circuit. Cooler shell-side leak is the typical source. Even small ingress drives general corrosion across the entire circuit.
+  </Accordion>
+  <Accordion title="Cooling pH falling" icon="flask">
+    The closed circuit's buffering capacity is being exhausted. Either the dosing is insufficient or there's a leak admitting fresh water. Drives general corrosion across all wetted metals.
+  </Accordion>
+  <Accordion title="Microbial counts rising" icon="bug">
+    Biofilm developing in the cooling circuit. Biofilms shield the metal under them from cathodic protection and corrosion inhibitor — pitting starts under the film. Treatment is biocide dosing plus circuit cleaning.
+  </Accordion>
+  <Accordion title="FWG salinity rising trend" icon="chart-line">
+    Either the FWG demister is failing (allowing salt carryover) or the seawater feed is more saline than the unit can handle. Membrane FWGs are particularly sensitive — once salinity rises, the heat exchanger downstream starts pitting.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Trend assessment — direction matters
+
+A three-sample trend per parameter classifies systems as Improving / Stable / Deteriorating. Direction matters as much as magnitude:
+
+$$
+\text{slope} = \frac{x_n - x_{n-2}}{2 \cdot \Delta t}
+$$
+
+For an upper-bounded parameter (chloride, conductivity, microbial count), positive slope is Deteriorating regardless of whether the current value is in spec — a vessel whose chloride has doubled from sample to sample is heading somewhere bad even if the latest reading is technically OK.
+
+For a lower-bounded parameter (pH, nitrite), positive slope is Improving. The pipeline encodes the bound direction per parameter so the verdict makes sense:
+
+```python
+PARAMETER_BOUNDS = {
+    "boiler_chloride":   "upper",
+    "boiler_pH":         "lower",
+    "boiler_phosphate":  "range",
+    "cooling_chloride":  "upper",
+    "cooling_pH":        "lower",
+    "cooling_nitrite":   "lower",
+    "cooling_microbial": "upper",
+    "fwg_salinity":      "upper",
+    # …
+}
+
+def trend_verdict(samples, bound_direction):
+    if len(samples) < 3:
+        return "Insufficient data"
+    slope = (samples[-1] - samples[-3]) / (2 * SAMPLE_INTERVAL_DAYS)
+    if abs(slope) < NOISE_THRESHOLD:
+        return "Stable"
+    if (slope > 0 and bound_direction == "upper") or \
+       (slope < 0 and bound_direction == "lower"):
+        return "Deteriorating"
+    return "Improving"
+```
+
+---
+
+## Chemical inventory and consumption
+
+The chemical-inventory view focuses on the supply side: per-chemical ROB, supplier, and the daily consumption rate computed from period-on-period stock changes:
+
+$$
+\dot{C}_\text{daily} = \frac{ROB_{n-1} - ROB_n}{\Delta t}
+$$
+
+Days remaining at current burn:
+
+$$
+\text{Days remaining} = \frac{ROB_n}{\dot{C}_\text{daily}}
+$$
+
+Compared against the next bunker call, the analyzer flags chemicals running short before resupply is feasible:
+
+| Days remaining | Tier |
+|----------------|------|
+| $> 60$ | OK |
+| $30$ to $60$ | Plan re-order |
+| $< 30$ | Re-order urgent |
+| $< 7$ | Critical — operational risk |
+
+A vessel that runs out of boiler treatment chemical at sea is forced to either secure the boiler or run untreated water — neither is acceptable as a planned outcome.
+
+---
+
+## A sample sweep on `MV POSUN`
+
+End-of-April water-treatment review:
+
+| System | Parameter | Latest | Spec | Trend | Verdict |
+|--------|-----------|-------:|------|-------|---------|
+| Boiler | pH | 10.8 | 10.5–11.5 | Stable | OK |
+| Boiler | Conductivity | 1,650 µS | $\leq 2,500$ | Rising | Watch |
+| Boiler | Chloride | **42 ppm** | $\leq 25$ | **Step jump from 18 ppm** | CRITICAL |
+| Boiler | Phosphate | 28 ppm | 20–40 | Stable | OK |
+| Cooling | pH | 8.6 | 8.5–9.5 | Falling | WARNING |
+| Cooling | Nitrite | 720 ppm | $\geq 500$ | Falling | Watch |
+| Cooling | Chloride | 45 ppm | $\leq 60$ | Stable | OK |
+| Cooling | Microbial | 320 cfu/mL | $\leq 1,000$ | Rising | Watch |
+| FWG | Salinity | 3.2 ppm | $\leq 5$ | Rising | Watch |
+
+Chemical inventory:
+
+| Chemical | ROB (kg) | Daily use | Days remaining |
+|----------|---------:|----------:|---------------:|
+| Boiler treatment (Drew Liquitreat) | 28 | 1.2 | 23 |
+| Cooling inhibitor | 84 | 1.8 | 47 |
+| Biocide | 12 | 0.4 | 30 |
+| FWG cleaner | 45 | 1.1 | 41 |
+
+**Verdict**: HIGH.
+
+- **Boiler chloride step jump** (18 → 42 ppm) is a feedwater contamination event — most likely a condenser tube leak. Investigation required immediately.
+- **Cooling pH falling + nitrite falling**: dosing rate insufficient or fresh-water leak. Cross-check the dosing pump and the FW expansion-tank level.
+- **Boiler treatment ROB 23 days**: re-order urgent; next bunker is in 14 days but supplier lead-time is 21.
+
+The pipeline:
+
+1. Flags the boiler chloride event to the Technical Superintendent — condenser inspection at next port.
+2. Generates the cooling-water dosing review for the chief engineer.
+3. Routes the re-order to procurement with the chemical-supply chain lead-time visible.
+
+---
+
+## What the senior review contains
+
+1. **Per-system parameter table** — current value, spec, trend, verdict, with damage-risk note for any out-of-range parameter.
+2. **Out-of-range findings** — the focused list with associated equipment risk.
+3. **Trend chart** — multi-period view per system, with direction-aware classification.
+4. **Chemical inventory** — per chemical, ROB, days remaining, re-order status.
+5. **Dosing review** — dosing pump performance, dosage-rate vs target.
+6. **Recommendations** — dosing changes, equipment inspection, sample re-runs.
+7. **Escalation decision** — to whom, and why.
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Boiler chloride above critical limit | CRITICAL |
+| Boiler chloride step jump from previous sample | CRITICAL |
+| Cooling chloride above critical limit | CRITICAL |
+| FWG salinity rising trend with current value $> 7$ ppm | HIGH |
+| Microbial count above safety limit | HIGH |
+| Critical chemical with no re-supply in lead-time window | HIGH |
+
+---
+
+## Why it's mostly trend-driven
+
+Spot readings on a water system are noisy — pH meters drift, sample bottles get contaminated, the engineer takes the sample at the wrong time. Trends are robust: a pH that's been falling for three samples in a row is real even if any single reading might be wrong. The pipeline weights the trend more heavily than the spot value for exactly that reason.
+
+<Note>
+The single most useful improvement in water-treatment data quality is calibrating the test kits monthly. A vessel with un-calibrated kits produces readings that look like rapid deterioration when actually nothing is happening — and the pipeline's trend logic dutifully escalates the noise.
+</Note>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Templates: bwt-management" icon="code">
+    BWT-management template — boiler and cooling water chemistry from vessel-side test forms, with chemical ROB tracking across suppliers (Drew Marine, Unitor, and others).
+  </Card>
+  <Card title="Related: Lube oil" icon="droplet" href="/skills/lube-oil">
+    Lube oil chemistry has its own pipeline, but cooler leaks show up in both.
+  </Card>
+  <Card title="Related: Forms" icon="clipboard" href="/skills/forms">
+    Boiler and cooling water test forms are the primary source — late submissions break this pipeline.
+  </Card>
+  <Card title="Related: Procurement" icon="cart-shopping" href="/skills/purchase">
+    Chemical re-supply runs through procurement; lead-time gaps surface in both pipelines.
+  </Card>
+</CardGroup>

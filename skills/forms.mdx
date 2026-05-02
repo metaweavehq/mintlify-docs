@@ -1,0 +1,283 @@
+---
+title: "Technical Forms Surveillance"
+description: "Form-by-form submission compliance plus the analytical layer that turns each form's data into engineering insights — bearing clearances, scrape-down iron, scavenge condition, and more."
+---
+
+A vessel files dozens of technical forms a month — ME performance, AE performance, deflection, bearing clearance, scrape-down, scavenge inspection, lube-oil consumption, lube-oil shore analysis, lube-oil condition, paint inventory, chemical inventory, walkie-talkie inventory. Two questions matter:
+
+> **Are they being submitted on time?** *(compliance)*
+
+> **What do the numbers in them actually tell us?** *(analysis)*
+
+Most forms-management systems answer only the first. The pipeline below answers both, on every monthly submission, automatically.
+
+---
+
+## Where the data comes from
+
+| Source | What it provides |
+|--------|------------------|
+| **Vessel ERP (forms module)** | Form register, mandatory list, submitted dates, due dates |
+| **Vessel-filed forms** | Structured form data — engine performance, lube-oil consumption, scavenge, paint &amp; chemical inventory, walkie-talkie inventory, etc. |
+| **DOC compliance master** | Document-of-Compliance form requirements per vessel type and flag |
+| **Email correspondence** | Form-chase threads from shore to vessel |
+
+Forms are filed by the vessel's officers via the ERP's forms module. The pipeline reads each filed form's structured payload (it does not re-parse the PDF) and runs the analytical layer per form. Submission status comes from the same ERP register.
+
+---
+
+## Compliance — the submission view
+
+For every required form, the pipeline tracks the last submitted date, the next-due date, and the lateness:
+
+$$
+\Delta_\text{days} = D_\text{next\_due} - D_\text{today}
+$$
+
+Submission rate per vessel per period:
+
+$$
+\text{Submission rate \%} = \frac{N_\text{submitted on time}}{N_\text{mandatory}} \times 100
+$$
+
+Three submission views:
+
+<Tabs>
+  <Tab title="Previous month">
+    The most recent closed month — what got submitted on time, what was late, what's missing entirely. The view a Technical Superintendent reads first.
+  </Tab>
+  <Tab title="Previous 12 months">
+    Rolling year of submission status per form. Surfaces patterns — a form that's chronically late is different from a form that was late once.
+  </Tab>
+  <Tab title="DOC-wise">
+    Aggregated by Document of Compliance — same data, different cut. Useful when DOC-level audit reporting is needed.
+  </Tab>
+</Tabs>
+
+The lateness distribution is more useful than the binary on-time count:
+
+| Window | Bucket |
+|--------|--------|
+| 0–7 days late | Acceptable slip |
+| 8–30 days late | Concerning |
+| 31+ days late | Compliance gap — escalate |
+| Not submitted | Black box — every analysis below depends on this form |
+
+---
+
+## Analysis — what each form actually tells us
+
+The compliance view is necessary; the analytical view is where the value is. Every monthly form contains numbers that reveal something about the vessel. The forms-processing templates run an analysis on each form as soon as it's filed, and route findings into the relevant pipeline.
+
+### ME performance form
+
+Running hours, load, SFOC, Pmax, Pcomp, exhaust pressure, exhaust temperature, feed rate. Routes findings to the [ME performance pipeline](/skills/me-performance) for cylinder uniformity and SFOC variance analysis.
+
+### ME bearing clearance
+
+Main bearings, bottom-end bearings, crosshead bearings, thrust-pad clearance — measured against the maker's wear-down curve:
+
+$$
+\text{Wear \%} = \frac{C_\text{measured} - C_\text{new}}{C_\text{condemn} - C_\text{new}} \times 100
+$$
+
+| Wear % | Status |
+|--------|--------|
+| $\leq 50\%$ | OK |
+| $50\%$ to $80\%$ | Monitor |
+| $80\%$ to $100\%$ | Plan replacement |
+| $> 100\%$ | Condemn — must be replaced |
+
+### ME scrape-down
+
+Iron content from cylinder oil scrape-down samples, residual BN variation, stuffing-box leakage status. Iron content is a leading indicator of liner / ring-pack wear:
+
+| Iron content | Interpretation |
+|--------------|----------------|
+| $< 100$ ppm | Normal break-in |
+| $100$ to $250$ ppm | Active wear, monitor |
+| $250$ to $500$ ppm | Accelerated wear, investigate |
+| $> 500$ ppm | Severe — engine inspection required |
+
+Stuffing-box leakage logged here cross-references the lube-oil consumption variance form.
+
+### ME scavenge inspection
+
+Feed rate, lubrication status, deposit formation, coating thickness, axial clearance per unit. The scavenge inspection is one of the few times the engineers actually see inside the engine, so the report quality matters.
+
+### AE performance form
+
+Same shape as ME but per AE. Routes to [AE performance pipeline](/skills/ae-performance).
+
+### Lube oil condition
+
+TBN, water content, viscosity, renewal status for ME / stern tube / AEs. Routes to [lube oil pipeline](/skills/lube-oil).
+
+### Deflection forms (ME and AE)
+
+Deflection readings per crankshaft web — indicator of bearing wear and crankshaft alignment. Out-of-tolerance deflection is a major-overhaul flag.
+
+### ICCP performance
+
+Aft, midship, forward current outputs and reference voltages from the impressed-current cathodic protection system. An ICCP that's drawing too much current is a paint condition issue; one drawing too little is an electrical issue.
+
+### Inventory forms
+
+- **Paint inventory** — ROB vs reorder threshold, drydock prep adequacy
+- **Chemical inventory** — water-treatment chemicals, cleaning chemicals; consumption vs spec
+- **Walkie-talkie inventory** — count, condition, charging — a small form but PSC inspectors check it
+- **Lube oil monthly** — ROB, consumption, FOC, renewal status (cross-reference with [lube-oil pipeline](/skills/lube-oil))
+
+### Motor condition analysis
+
+Megger readings and current draw on critical motors — bilge pump, fire pump, GS pump, AE starter motors. Falling insulation resistance is a leading indicator of motor failure.
+
+### Month-end consolidated report
+
+The roll-up: every monthly form analyzed, with the worst findings surfaced first. The view a TSI reads on the first of every month.
+
+---
+
+## Implementation reference
+
+The submission status logic is structurally identical across the three submission views — only the time window differs. Condensed:
+
+```python
+def compute_submission_status(forms, today):
+    rows = []
+    for form in forms:
+        last_submitted = parse_date(form.get("submittedDate"))
+        next_due       = parse_date(form.get("nextDueDate"))
+
+        if last_submitted is None:
+            status = {"text": "Never submitted", "color": "red"}
+        elif next_due is None:
+            status = {"text": "In Order", "color": "green"}
+        else:
+            days_diff = (next_due - today).days
+            if days_diff < 0:
+                if abs(days_diff) <= 7:
+                    status = {"text": f"Late {abs(days_diff)} days", "color": "orange"}
+                elif abs(days_diff) <= 30:
+                    status = {"text": f"Late {abs(days_diff)} days", "color": "red"}
+                else:
+                    status = {"text": "Compliance gap", "color": "red"}
+            elif days_diff <= 14:
+                status = {"text": f"Due in {days_diff} days", "color": "orange"}
+            else:
+                status = {"text": "In Order", "color": "green"}
+
+        rows.append({
+            "form":           form["name"],
+            "last_submitted": last_submitted,
+            "next_due":       next_due,
+            "status":         status,
+        })
+    return rows
+```
+
+The analytical templates all follow the same shape: read the form's structured data, extract the parameters, classify each parameter against a maker's spec or fleet-norm threshold, return both the per-parameter verdict and the aggregate form verdict.
+
+---
+
+## Repeat-delay detection
+
+A form that's late once is a slip; a form that's been late three months in a row is a process problem. The pipeline groups late submissions by form and surfaces forms that have failed three or more consecutive periods:
+
+```text
+RECURRING LATE SUBMISSIONS
+
+ME deflection           →  Late 4 of last 6 months
+Lube oil shore analysis →  Late 5 of last 6 months
+Paint inventory         →  Late 3 of last 6 months
+```
+
+Recurring late submissions usually trace back to one of:
+
+- Owner of the form rotated off vessel and handover incomplete
+- Form has been moved into the master compliance system but the engineers don't know
+- Form depends on a sample / measurement that itself is overdue
+- Form has been deprecated but not removed from the mandatory list
+
+The first three are recoverable with one conversation; the fourth is a maintenance gap in the master compliance system.
+
+---
+
+## Worked example
+
+`MV POSUN`, end-of-April submission review:
+
+| Form | Last submitted | Status | Notes |
+|------|----------------|--------|-------|
+| ME performance | 2026-04-05 | In Order | — |
+| AE performance | 2026-04-08 | In Order | — |
+| AE LO consumption | 2026-03-12 | Late 18 days | Recurring — late 3 of 6 |
+| LO shore analysis | 2026-02-25 | Compliance gap | 35 days late |
+| ME bearing clearance | 2026-04-15 | In Order | Crosshead 4 wear at 78% — monitor |
+| ME scrape-down | 2026-04-15 | In Order | Iron 165 ppm — normal |
+| Paint inventory | 2026-03-30 | Late 8 days | Recurring — late 3 of 6 |
+| Walkie-talkie inventory | 2026-04-12 | In Order | All 8 units OK |
+
+**Submission rate**: 84% — below the 95% threshold, flagged.
+
+**Recurring lates**: AE LO consumption, LO shore analysis, paint inventory — all three are likely linked to the same officer change.
+
+**Analytical findings** routed to other pipelines:
+
+- ME crosshead 4 bearing at 78% wear → routed to [ME performance](/skills/me-performance) and [PMS](/skills/pms) for replacement planning.
+- Paint inventory recurring lateness → flagged to chief officer for handover audit.
+- LO shore analysis 35 days late → blind spot on [lube oil](/skills/lube-oil) for the past month, escalated.
+
+---
+
+## What the senior review contains
+
+1. **Submission rate** — overall %, lateness distribution, gap count.
+2. **Recurring late forms** — the pattern view, with likely cause.
+3. **Compliance gaps** — forms more than 30 days late or never submitted.
+4. **Analytical findings by form** — every analyzed form with its verdict, routed to the appropriate domain.
+5. **Cross-domain notes** — where a form's content matters for another pipeline (e.g. wear-down readings for PMS planning).
+6. **Recommendations** — split between submission-process fixes and analytical action items.
+7. **Escalation decision** — to whom, and why.
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Submission rate below 90% | HIGH |
+| Form 31+ days late | CRITICAL |
+| Repeat delay across 3+ consecutive periods | HIGH |
+| Safety-critical form (lifesaving, firefighting) overdue | CRITICAL |
+| Form analytical finding outside spec (e.g. bearing condemn) | per finding |
+| Compliance gap on lube-oil consumption or shore-analysis forms | HIGH |
+
+---
+
+## Why both views matter
+
+A vessel can have 100% submission rate and still have a wear-down problem buried in the deflection report nobody read. A vessel can have low submission rate and be operating fine — until the audit lands. The pipeline reports both because they're independent failure modes; you can fail one and pass the other, and the actions are different.
+
+<Tip>
+The forms compliance number is what auditors care about. The analytical findings are what keeps the engine running. They are not the same problem and shouldn't be conflated.
+</Tip>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Forms-submission templates" icon="code">
+    Submission status views — previous month, previous 12 months, and DOC-wise rollup.
+  </Card>
+  <Card title="Templates: forms-processing" icon="microscope">
+    15 templates running per-form analysis on ME / AE performance, bearing clearance, scrape-down, scavenge inspection, deflection, lube oil, ICCP, motor condition, paint &amp; chemical inventory, walkie-talkie inventory, and the month-end consolidated report.
+  </Card>
+  <Card title="Related: ME / AE performance" icon="ship">
+    ME and AE performance forms feed directly into the engine pipelines.
+  </Card>
+  <Card title="Related: Lube oil" icon="droplet" href="/skills/lube-oil">
+    Lube-oil consumption and shore-analysis forms are the source data for the lube oil pipeline.
+  </Card>
+</CardGroup>

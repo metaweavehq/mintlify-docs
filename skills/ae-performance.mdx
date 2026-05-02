@@ -1,0 +1,260 @@
+---
+title: "Auxiliary Engine Performance"
+description: "End-to-end pipeline that captures auxiliary engine telemetry, scores blackout risk, classifies SFOC and overhaul exposure, and produces a senior expert review."
+---
+
+## Executive summary
+
+Auxiliary engines do not power the vessel — they power everything else on it. A single AE failure with no standby is a blackout. A blackout in port is a delay; a blackout at sea is a casualty. The job of a Technical Superintendent reviewing AEs is therefore not just "is the engine healthy" but "is the **fleet of generators** healthy enough to ride through any one of them failing".
+
+The **Auxiliary Engine Performance** pipeline answers both questions on a rolling basis. It captures every monitored AE parameter from the ERP's monthly performance reports, evaluates engine availability and load-sharing posture, scores blackout risk, and produces a senior review whenever a vessel's redundancy degrades or an engine drifts toward overhaul.
+
+## Architecture
+
+```
+       ┌─────────────────────────────────────────┐
+       │  ERP telemetry  ·  Engine register  ·  PMS  │
+       └─────────────────────┬───────────────────┘
+                             │ monthly reports + specs
+                             ▼
+       ┌─────────────────────────────────────────┐
+       │   Stage 1 — Collection                   │
+       │   Per-engine telemetry, hours, alarms   │
+       └─────────────────────┬───────────────────┘
+                             │ structured telemetry
+                             ▼
+       ┌─────────────────────────────────────────┐
+       │   Stage 2 — Analysis                     │
+       │   • Engine availability & redundancy    │
+       │   • Load-sharing posture                 │
+       │   • SFOC variance per engine             │
+       │   • Six-month parameter rollup           │
+       │   • Overhaul timing                      │
+       │   • Blackout-risk score                  │
+       └─────────────────────┬───────────────────┘
+                             │ verdict + scores
+                             ▼
+       ┌─────────────────────────────────────────┐
+       │   Stage 3 — Expert review                │
+       │   Auto-escalate to TSI when triggered   │
+       └─────────────────────────────────────────┘
+```
+
+---
+
+## Stage 1 — Data collection
+
+### Where the data comes from
+
+| Source | What it provides |
+|--------|------------------|
+| **Vessel ERP** | AE register, running hours, status (running / standby / fault), alarms history |
+| **Forms (AE Performance)** | Monthly per-engine data filed by Chief Engineer |
+| **PMS counter feed** | Hours since overhaul per engine — drives overhaul timing |
+
+The AE collector pulls the latest performance entry per engine from the telemetry feed. The same six-month rolling window used for ME reports applies — every monthly performance report, parameter by parameter, per AE unit.
+
+### What gets captured
+
+| Domain | Data |
+|--------|------|
+| Engine state | Status (running / standby / fault / maintenance), running hours, hours since overhaul |
+| Load | Load percentage, power output, exporting / importing |
+| Per-cylinder | Pmax, exhaust temperature, FW inlet/outlet temp |
+| Aspiration | Boost pressure, exhaust back-pressure |
+| Fuel | SFOC actual, fuel grade in use |
+| Power management | Number of engines online, blackout-risk inputs |
+| Alarms | Active alarms with severity at sample time |
+
+### Output
+
+A single timestamped record per vessel covering every AE plus the power-management context.
+
+---
+
+## Stage 2 — Analysis
+
+### 2.1 Engine availability and redundancy
+
+Each AE is bucketed by status. The fleet-of-generators view is the **availability tier**:
+
+| Running | Standby | Tier | Risk |
+|---------|---------|------|------|
+| 1 | 2+ | Adequate redundancy | LOW |
+| 1 | 1 | Minimum redundancy | MEDIUM |
+| 1 | 0 | No redundancy | HIGH |
+| 2+ | 0 | Load sharing, no backup | MEDIUM |
+| 0 | any | Blackout — terminal | CRITICAL |
+
+Utilization is tracked too: if the same engine always runs, wear is uneven; if standby rotation is happening, the fleet stays balanced. Standby rotation cadence is a leading indicator of how the engineers actually operate the plant.
+
+### 2.2 SFOC variance
+
+Per-engine SFOC variance follows the same definition as the [main engine](/skills/me-performance):
+
+$$
+\text{Variance \%} = \frac{\text{SFOC}_\text{actual} - \text{SFOC}_\text{design}(P)}{\text{SFOC}_\text{design}(P)} \times 100
+$$
+
+Sustained variance above 8% is flagged. Above 10% triggers escalation. AEs typically run at narrower load bands than ME, so variance shows up faster.
+
+### 2.3 Daily fuel-cost impact
+
+Variance is converted to dollars per day so the review carries commercial weight:
+
+$$
+\Delta C_\text{day} = \frac{(\text{SFOC}_\text{actual} - \text{SFOC}_\text{design}) \cdot P \cdot 24}{10^{6}} \quad \text{[MT/day]}
+$$
+
+$$
+\text{Cost}_\text{day} = \Delta C_\text{day} \cdot \text{Price}_\text{fuel} \quad [\$]
+$$
+
+For a 1.2 MW AE running at 75% load with 5% variance and a $700/MT MGO price, that's roughly **$120/day of waste**, or $44k/year per engine — usually enough to justify an injector replacement.
+
+### 2.4 Six-month parameter rollup
+
+The same dashboard format used for ME applies — every monitored parameter per engine per month. The grid logic, condensed:
+
+```python
+# For each AE (AE1 / AE2 / …) build a six-month grid keyed by parameter
+for ae_number in sorted(engines):
+    for parameter_key in PARAMETERS:                  # PMAX, EXHAUSTTEMP, …
+        main_row = [f"{ae_number} {parameter_key}"]
+
+        for month_date, month_label in zip(six_months_dates, six_months_labels):
+            performance = performance_data.get(month_date)
+
+            if performance == "No Data Available":
+                current = (month_date.month == datetime.utcnow().month and
+                           month_date.year  == datetime.utcnow().year)
+                main_row.append("Report yet to be submitted" if current
+                                else "Missing Report")
+                continue
+
+            value = performance["data"].get(f"{parameter_key}AVERAGE")
+            main_row.append(round(value, 2) if value is not None else "No Data Available")
+```
+
+Two states matter in the gaps: **report yet to be submitted** (current month, expected) versus **missing report** (past month, compliance issue). The analyzer surfaces both.
+
+### 2.5 Cylinder uniformity
+
+Same logic as the main engine — cylinder deviation against the engine mean:
+
+$$
+\Delta T_i = T_i - \bar{T}, \quad \bar{T} = \frac{1}{N}\sum_{i=1}^{N} T_i
+$$
+
+| Severity | Threshold |
+|----------|-----------|
+| OK | $\lvert \Delta T_i \rvert \leq 30\,°\text{C}$ |
+| WARNING | $30 < \lvert \Delta T_i \rvert \leq 50\,°\text{C}$ |
+| CRITICAL | $\lvert \Delta T_i \rvert > 50\,°\text{C}$ |
+
+### 2.6 Overhaul timing
+
+$$
+H_\text{remaining} = H_\text{interval} - (H_\text{current} - H_\text{last\_overhaul})
+$$
+
+Tiered identically to ME (see [main engine page](/skills/me-performance)). The difference is that an AE overhaul typically degrades the redundancy tier above — booking maintenance forces a tier check on the rest of the fleet.
+
+### 2.7 Blackout-risk score
+
+The composite that drives the senior verdict:
+
+$$
+R_\text{blackout} = w_1 N_\text{fault} + w_2 (1 - C_\text{margin}) + w_3 R_\text{redundancy} + w_4 N_\text{overdue}
+$$
+
+where:
+
+- $N_\text{fault}$ — count of engines in FAULT
+- $C_\text{margin}$ — capacity margin = $\frac{\text{available kW} - \text{load kW}}{\text{available kW}}$
+- $R_\text{redundancy}$ — redundancy tier multiplier (LOW=0, MEDIUM=1, HIGH=2)
+- $N_\text{overdue}$ — overhauls overdue
+
+The composite maps to LOW / MEDIUM / HIGH / CRITICAL. HIGH or CRITICAL escalates immediately.
+
+---
+
+## Worked example
+
+**Vessel**: `MV POSUN` (IMO 9388340), 3 × MAN 7L21/31 generators.
+
+After a refresh:
+
+| Engine | Status | Hours | SFOC variance | Notes |
+|--------|--------|-------|---------------|-------|
+| AE1 | RUNNING | 12,400 | +6% | Cylinder 4 hot (38 °C above mean) |
+| AE2 | STANDBY | 8,200 | — | OK, available |
+| AE3 | FAULT | 11,900 | — | Tripped on low LO pressure 6 days ago |
+
+State: 1 running, 1 standby, 1 in fault → redundancy tier **HIGH**, capacity margin tight if AE1 fails.
+
+Composite blackout-risk: **HIGH**. The pipeline:
+
+1. Tags the run with `escalation_required: true`
+2. Updates the case to `awaiting-tsi-review`, priority CRITICAL
+3. Sends an A2A message to the TSI inbox with engine evidence and recommended actions
+
+**Recommended actions**:
+
+1. Investigate AE3 LO-pressure trip root cause — restore service before next port departure.
+2. Replace AE1 cylinder 4 fuel injector at next port — variance plus cylinder hot signature.
+3. Confirm AE2 standby readiness drill within 24h while AE3 is out.
+
+---
+
+## Output deliverables
+
+- **Executive summary** — overall AE status, redundancy tier, blackout risk
+- **Per-engine table** — status, load, hours, SFOC variance, alarms
+- **Cylinder uniformity** — per-cylinder deviation per engine
+- **Six-month rollup** — every monitored parameter per engine per month
+- **Power-management assessment** — load profile, capacity margin, blackout-risk score
+- **Overhaul plan** — urgent / upcoming, port-call coordination
+- **Cost impact** — variance translated to daily and annual fuel waste
+- **Recommendations** — prioritised actions with timeline
+- **Escalation decision** — auto-routed to TSI when triggered
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Any engine in FAULT | CRITICAL |
+| Blackout-risk score = HIGH or CRITICAL | CRITICAL |
+| Cylinder deviation above 50 °C | CRITICAL |
+| Overhaul overdue or under 500 hours away | CRITICAL |
+| Multiple engines showing WARNING | HIGH |
+| SFOC variance above 8% on any engine | HIGH |
+| Load-sharing failure | HIGH |
+| Exhaust temp above 420 °C | CRITICAL |
+
+---
+
+## Why script-driven
+
+Redundancy tiers, SFOC variance, and blackout-risk weighting all live in deterministic Python. The reviewer interprets the result; the verdict is reproducible. A review where the redundancy tier shifts from MEDIUM to HIGH between two consecutive runs is a real event in the data, not a model decision.
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Source templates" icon="code">
+    Performance analysis suite — AE monthly rollup and engine specifications &amp; running hours.
+  </Card>
+  <Card title="Related: Main engine" icon="ship" href="/skills/me-performance">
+    Same analysis pattern applied to the main propulsion plant.
+  </Card>
+  <Card title="Related: Lube oil" icon="droplet" href="/skills/lube-oil-analyzer">
+    AE LO trends often confirm cylinder findings.
+  </Card>
+  <Card title="Related: Fuel oil" icon="gas-pump" href="/skills/fuel-oil-analyzer">
+    Fuel quality is a common cause of variance and cylinder asymmetry.
+  </Card>
+</CardGroup>

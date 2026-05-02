@@ -1,0 +1,204 @@
+---
+title: "LSA / FFA Surveillance"
+description: "Life-Saving Appliances and Fire-Fighting Appliances — service history, upcoming maintenance, flag-specific requirements, and the saturday-routine compliance view."
+---
+
+LSA (Life-Saving Appliances) and FFA (Fire-Fighting Appliances) are the equipment that matters when nothing else does. Lifeboats, life-rafts, EEBDs, fire pumps, fire detection panels, fixed fire-fighting systems, breathing apparatus, immersion suits, lifebuoys — every item has a maintenance schedule, an inspection regime, and a flag-state-specific service requirement.
+
+A PSC inspector who finds an out-of-service lifeboat winch can detain the vessel. A flag inspector who finds an expired EEBD canister can issue a deficiency. The **LSA / FFA Surveillance** pipeline keeps every one of these items visible against its schedule and against the relevant flag-state requirements.
+
+---
+
+## Where the data comes from
+
+| Source | What it provides |
+|--------|------------------|
+| **Vessel ERP (PMS / equipment module)** | LSA / FFA equipment register, last service dates, next due dates |
+| **Service-station reports** | Lifeboat annual / 5-yearly overhaul, life-raft service, BA test, hydrostatic test reports |
+| **Saturday routine submissions** | SOLAS-required weekly check log filed by the vessel |
+| **Flag circulars corpus** | Flag-state-specific service intervals and additional checks (Panama, Singapore MPA, Marshall Islands, Liberia, Bahamas, Hong Kong, Malta) |
+| **Approved-station authorisation list** | Per-flag list of stations authorised to service LSA / FFA equipment |
+
+LSA / FFA service must be done by approved stations, so the authorisation list is itself a critical data source — service performed at a non-authorised station is invalid and must be re-done.
+
+---
+
+## What's tracked
+
+| Equipment family | Examples |
+|------------------|----------|
+| **Survival craft** | Lifeboats, rescue boats, life-rafts, davits, winches, release gear |
+| **Personal LSA** | Lifejackets, lifebuoys, immersion suits, thermal protective aids |
+| **Fixed firefighting** | CO₂ system, foam system, sprinkler, fire pumps, fire detection |
+| **Portable firefighting** | Extinguishers (water / foam / CO₂ / dry powder), hoses, nozzles, fire-blankets |
+| **Breathing apparatus** | SCBA, EEBDs, BA charging compressor |
+| **Communication** | EPIRBs, SARTs, two-way VHF, AIS-SART |
+| **Pyrotechnics** | Rocket flares, hand flares, smoke signals, line-throwing apparatus |
+
+Each equipment item carries:
+
+- Type and certification (SOLAS-approved, MED-marked, manufacturer)
+- Last service date and service type
+- Next service due date and type
+- Service interval (typically annual + 5-year overhaul + 10-year hydrostatic)
+- Service provider (approved station)
+
+---
+
+## The three views
+
+The LSA templates produce three complementary views:
+
+<AccordionGroup>
+  <Accordion title="Equipment service history" icon="wrench">
+    Every LSA/FFA item with last service date, next due date, and the service type. The list view a Chief Officer reads to plan the next service round.
+  </Accordion>
+  <Accordion title="Flag-specific requirements" icon="flag">
+    Flag circulars often add requirements above SOLAS — e.g. extra CO₂-system testing intervals, additional EEBD mustering exercises. This view surfaces the flag-state-specific overlay so the schedule reflects what *this vessel's flag* actually requires, not just the IMO baseline.
+  </Accordion>
+  <Accordion title="Service records and upcoming dates" icon="calendar-check">
+    The dashboard view — what's been serviced when, what's coming up, what's overdue. Plus the supporting documentation (service reports, certificates) for each completed service.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Service-window classification
+
+Same expiry-window logic the other pipelines use:
+
+$$
+\Delta_\text{days} = D_\text{next\_service} - D_\text{today}
+$$
+
+| Window | Tier |
+|--------|------|
+| Already overdue | CRITICAL |
+| 0–14 days | HIGH |
+| 15–60 days | MEDIUM |
+| 61–180 days | LOW |
+| > 180 days | OK |
+
+LSA/FFA service windows are tighter than other expiry tracking because the service requires a shore-based approved station — you can't service a lifeboat at sea. A service due within 14 days needs a port call within 14 days; if the schedule doesn't allow it, the service slips and the equipment goes overdue.
+
+---
+
+## Saturday routine
+
+Saturday routines are the SOLAS-required weekly checks: lifeboat lighting, lifebuoy checks, fire-detection panel test, fire-pump start, etc. They aren't part of the major-service schedule but they're a leading indicator of LSA/FFA care.
+
+A vessel that consistently misses Saturday routines is a vessel where the smaller LSA/FFA items will start to drift. The pipeline tracks Saturday routine submission via the [PMS pipeline](/skills/pms) and cross-references it with the major-service compliance.
+
+---
+
+## Flag-state overlay
+
+Different flags impose different service intervals and additional checks. The flag-overlay view pulls the relevant flag circulars from the [flag-circulars corpus](/skills/download-flag-circulars) and produces an overlay:
+
+- Panama: Marine Notice 13-2018 — additional CO₂ system release-mechanism testing
+- Singapore: SCN 03 of 2023 — EEBD muster requirements during port stays > 24h
+- Marshall Islands: MN-2-011-44 — life-raft maintenance station authorisation list
+- Liberia: Marine Operations Note — semi-annual fire-pump performance verification
+
+The overlay re-classifies items where the flag requirement is more stringent than the SOLAS baseline. A vessel can be SOLAS-compliant but flag-non-compliant — the overlay catches that.
+
+---
+
+## Maintenance station compliance
+
+LSA/FFA service is typically done by approved stations — not every shore facility can certify a lifeboat or recharge a CO₂ cylinder. The pipeline tracks:
+
+- Station approval status (active, lapsed, conditional)
+- Authorisation per flag (some stations approved by some flags)
+- Service-quality history (any rework events)
+
+A service performed at a non-authorised station is invalid — the equipment must be re-serviced. The pipeline flags station-mismatch events explicitly.
+
+---
+
+## Worked example
+
+`MV POSUN`, Panama-flagged, end-of-April LSA/FFA review:
+
+| Item | Last service | Next due | Δ days | Verdict |
+|------|--------------|----------|-------:|---------|
+| Lifeboat 1 — annual | 2025-08-12 | 2026-08-12 | +103 | OK |
+| Lifeboat 1 — 5-yr overhaul | 2024-09-04 | 2029-09-04 | +1592 | OK |
+| Life-raft P1 | 2025-06-22 | 2026-06-22 | +52 | LOW |
+| Life-raft P2 | 2025-06-22 | 2026-06-22 | +52 | LOW |
+| EEBD — eng room (4 units) | 2025-09-15 | 2026-09-15 | +137 | OK |
+| EEBD — bridge (2 units) | **2025-04-30** | **2026-04-30** | **0** | **CRITICAL — overdue today** |
+| CO₂ system release test | 2025-10-08 | 2026-10-08 | +160 | OK |
+| Fire pump performance | 2025-11-12 | 2026-05-12 | +11 | HIGH |
+| Saturday routines | Submitted last 5 weeks | — | — | OK |
+
+Plus the Panama overlay:
+
+- CO₂ release-mechanism testing required quarterly under Marine Notice 13-2018; last done 2026-01-08, next due 2026-04-08 — **overdue 22 days**.
+
+**Verdict**: CRITICAL — bridge EEBDs overdue today (must not be used at sea), CO₂ release-mechanism testing 22 days overdue under flag rules.
+
+Recommendations:
+
+1. Bridge EEBDs — service at next port (3 days). Until then, mark as out-of-service and use engine-room EEBDs for any bridge-area emergency.
+2. CO₂ release-mechanism testing — schedule with approved station at next port; this is flag-specific so a SOLAS-only inspection won't catch it but a Panama flag inspector will.
+3. Fire-pump performance — book service for next port (within 11 days of due date).
+
+The pipeline:
+
+1. Flags the bridge EEBD overdue to the Master with the temporary mitigation note.
+2. Generates the next-port service work-list.
+3. Routes the flag-overlay finding to the Marine Superintendent with the specific Marine Notice citation.
+
+---
+
+## What the senior review contains
+
+1. **Equipment service status table** — every item with last service, next due, verdict.
+2. **Overdue list** — focused view, severity-ranked.
+3. **Flag overlay findings** — items where flag-state requirements are more stringent than SOLAS.
+4. **Saturday routine compliance** — weekly check submission rate.
+5. **Maintenance-station status** — authorisation gaps, service-quality history.
+6. **Next-port service plan** — items due within port-call window, prioritised.
+7. **Escalation decision** — to whom, and why.
+
+---
+
+## Escalation triggers
+
+| Trigger | Severity |
+|---------|----------|
+| Any LSA / FFA item overdue and equipment in service | CRITICAL |
+| Flag-overlay finding overdue | HIGH (CRITICAL if safety-critical) |
+| Saturday routine missed for 3+ consecutive weeks | HIGH |
+| Service performed at non-authorised station | CRITICAL — re-service required |
+| Multiple items due within next 7 days with no service plan | HIGH |
+
+---
+
+## Why LSA/FFA needs its own pipeline
+
+LSA/FFA tracking sits awkwardly across the other pipelines. PMS handles it generically but doesn't know about flag-state overlays; certificates tracks SoC but not the underlying service. Defects sees the failures after the fact. None of the other pipelines fully reflect the urgency of safety equipment — a 14-day overdue lifeboat winch has different commercial consequence than a 14-day overdue paint-locker inventory. The dedicated pipeline keeps the visibility and the priority right.
+
+<Tip>
+The single most consequential improvement most fleets can make on LSA/FFA is keeping the maintenance-station authorisation list current. A station that was approved last year may not be this year — service performed at a lapsed station has to be re-done. The pipeline cross-references the station list at the time of service to surface this immediately.
+</Tip>
+
+---
+
+## References
+
+<CardGroup cols={2}>
+  <Card title="Templates: lsa-management" icon="code">
+    LSA-management suite — equipment service history, flag-specific requirements overlay, and service records with upcoming dates.
+  </Card>
+  <Card title="Related: PMS" icon="wrench" href="/skills/pms">
+    LSA / FFA service items also live in PMS — the saturday-routine view is shared.
+  </Card>
+  <Card title="Related: Flag circulars" icon="flag" href="/skills/download-flag-circulars">
+    Flag-specific service overlay depends on a current flag-circulars corpus.
+  </Card>
+  <Card title="Related: Compliance" icon="scale-balanced" href="/skills/compliance">
+    LSA / FFA findings appear in PSC and SIRE inspections — the compliance pipeline tracks those outcomes.
+  </Card>
+</CardGroup>

@@ -1,0 +1,284 @@
+---
+title: "Fuel Oil Surveillance"
+description: "Bunker quality, ROB position, consumption variance and stem planning — every fuel-borne risk a Technical Superintendent owns, scored and routed."
+---
+
+A vessel running 35 tonnes of HSFO a day at sea is also running every gram of sulphur, every milligram of cat fines, every drop of water that came in with that fuel. The bunker analysis report from the lab arrives 5–7 days *after* the fuel is in the tank — by then half of it is already in the engine. **Fuel Oil Surveillance** is the pipeline that turns the bunker data, the lab results, and the ROB position into a TSI-grade view of what's about to happen, not what already did.
+
+<Note>
+Cat fines above 60 mg/kg are an engine-damage event, not a paperwork problem. The fastest and cheapest disposition for a bad bunker is debunkering at the supply port — every day in service multiplies the cost of doing nothing.
+</Note>
+
+## What's on this page
+
+<CardGroup cols={3}>
+  <Card title="The data" icon="database">
+    Three streams: bunker quality from BDN + lab, tank-level ROB by grade, and daily consumption from noon reports.
+  </Card>
+  <Card title="The thresholds" icon="ruler">
+    Cat fines, sulphur, viscosity, water — the numbers that drive engine and compliance risk.
+  </Card>
+  <Card title="The decisions" icon="gavel">
+    Debunker, blend, monitor, or do nothing. Plus stem timing, ECA-window planning, fleet-wide rollups.
+  </Card>
+</CardGroup>
+
+---
+
+## Where the data comes from
+
+| Stream | Source | What it tells us |
+|--------|--------|------------------|
+| **Bunker analysis** | BDN + independent lab report | Per-bunker quality: viscosity, density, sulphur, cat fines, water, sediment |
+| **Tank ROB** | Latest noon report (12:00 UTC) | Current quantity per grade, per tank — storage and service tanks separately |
+| **Daily consumption** | Noon-report stream | Burn rate per grade, normalised to engine load and weather |
+| **Stem schedule** | Bunker plan in ERP | Next bunker port, supplier, expected quantity |
+| **Vessel ECA exposure** | Voyage plan | Whether the next leg is in an Emission Control Area |
+
+Bunker quality is sourced from any of the major marine fuel laboratories the vessel uses for independent analysis:
+
+| | Laboratory | Specialty |
+|---|------------|-----------|
+| <img src="/images/brands/bureau-veritas.svg" alt="Bureau Veritas" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Bureau Veritas / VeriFuel** | Independent fuel quality testing |
+| <img src="/images/brands/vps.svg" alt="VPS" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **VPS** — Veritas Petroleum Services | Fuel quality &amp; quantity surveys |
+| <img src="/images/brands/maritec.svg" alt="Maritec" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Maritec** | Bunker analysis |
+| <img src="/images/brands/tribocare.svg" alt="Tribocare" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Tribocare** | Fuel and lube oil analysis |
+| <img src="/images/brands/viswa.svg" alt="Viswa Lab" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **Viswa Lab** | Fuel analysis with extended testing |
+| <img src="/images/brands/fobas.svg" alt="FOBAS" style={{ height: '32px', width: 'auto', display: 'inline-block' }} /> | **FOBAS** — Lloyd's Register Fuel Oil Bunker Analysis Service | Fuel testing and advisory |
+
+Most labs send results by email after the bunker is sampled at delivery; the pipeline parses the lab report and reconciles against the BDN.
+
+Fuel grades tracked: **HSFO**, **VLSFO**, **ULSFO**, **MDO**, **LSMGO**, **LNG**.
+
+---
+
+## The thresholds
+
+Each parameter has a regulatory limit, an engine spec, and a working threshold the analyzer uses to flag attention. The working threshold is always tighter than the regulatory limit — by the time you've breached the regulation it's too late to act.
+
+<AccordionGroup>
+  <Accordion title="Cat fines (Aluminium + Silicon)" icon="microscope">
+    Cat fines are catalyst fines from the refining process — silicon and aluminium oxides hard enough to score liners, rings, and fuel pumps. ISO 8217 caps them at 60 mg/kg in the delivered bunker. Engine makers want them at 15 mg/kg or below at the engine inlet — fuel treatment can reduce 60 → 15 only if the centrifuges are working perfectly.
+
+    | Threshold | Status | Action |
+    |-----------|--------|--------|
+    | $\leq 15$ mg/kg | Safe | Routine |
+    | $15$ to $60$ mg/kg | Risky | Confirm centrifuge effectiveness, monitor closely |
+    | $> 60$ mg/kg | Critical | Debunkering candidate — engine-damage risk |
+
+    The fleet-wide cat-fines plot draws a red dotted line at 15 mg/kg — every dot above the line is a vessel that depends entirely on fuel treatment to keep its engine alive.
+  </Accordion>
+
+  <Accordion title="Sulphur — BDN vs lab" icon="flask">
+    The ISO 8217 sulphur cap is **0.50% m/m** globally and **0.10% m/m** in ECAs. Two checks run in parallel:
+
+    1. **BDN compliance** — the supplier's declared sulphur on the Bunker Delivery Note must be at or below the operating cap.
+    2. **Lab confirmation** — the independent test must confirm the BDN within the tolerance.
+
+    A BDN that says 0.48% but a lab at 0.53% is a dispute case — there are commercial implications regardless of whether the vessel was operating in an ECA.
+
+    $$
+    \text{Discrepancy \%} = \frac{\lvert S_\text{lab} - S_\text{BDN} \rvert}{S_\text{BDN}} \times 100
+    $$
+
+    Above 5% triggers a supplier dispute flag.
+  </Accordion>
+
+  <Accordion title="Viscosity, density, water, sediment" icon="droplet">
+    Viscosity (cSt at 50 °C) and density (kg/m³ at 15 °C) determine whether the engine's fuel system can handle the fuel — too viscous and the heater can't drop it to injection viscosity; too dense and the centrifuge separation efficiency falls. Water above 0.5% v/v is corrosive; sediment above 0.10% m/m clogs filters and erodes pumps.
+  </Accordion>
+
+  <Accordion title="ROB safety reserve" icon="gas-pump">
+    Days of fuel at current burn:
+
+    $$
+    \text{Days of fuel} = \frac{\text{ROB}}{\dot{C}_\text{daily}}
+    $$
+
+    Compared against the next stem date with margin:
+
+    | Days remaining | Tier |
+    |----------------|------|
+    | $< 7$ with no stem arranged | CRITICAL |
+    | $7$ to $14$ with stem more than 7 days out | HIGH |
+    | $14$ to $30$ — routine planning | MEDIUM |
+    | $> 30$ | OK |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## How the analyzer thinks
+
+The pipeline runs three independent passes that compose into the senior verdict.
+
+### Pass 1 — Per-bunker quality
+
+Every BDN since the last review is checked against the thresholds above. Each parameter gets a verdict (Safe / Risky / Critical), and each bunker gets an aggregate disposition:
+
+| Disposition | Trigger |
+|-------------|---------|
+| Accept | All parameters Safe |
+| Monitor | One or more Risky, none Critical |
+| Blend | Risky on cat fines or sulphur where mixing with cleaner stock can dilute below the threshold |
+| Debunker | Any Critical, especially cat fines $> 60$ mg/kg |
+| Dispute | BDN-vs-lab discrepancy on sulphur above tolerance |
+
+### Pass 2 — Tank distribution and bunker planning
+
+For each tank the analyzer reports current ROB against capacity:
+
+$$
+\text{Bunker intake (to 85\%)} = (0.85 \cdot V_\text{capacity}) - V_\text{current}
+$$
+
+Aggregated across grade gives the recommended quantity for the next bunker call. A tank already above 85% gets flagged for ullage check rather than further loading.
+
+### Pass 3 — Consumption variance
+
+Daily consumption is normalised to engine load and weather, then compared against design:
+
+$$
+\text{Variance \%} = \frac{\dot{C}_\text{actual} - \dot{C}_\text{design}}{\dot{C}_\text{design}} \times 100
+$$
+
+Sustained variance over 10% is flagged. Combined with the [main engine SFOC analysis](/skills/me-performance), the analyzer can usually distinguish a fuel-quality cause (consumption + cat fines) from an engine-condition cause (consumption + cylinder asymmetry).
+
+---
+
+## Implementation reference
+
+The cat-fine fleet split logic, condensed:
+
+```python
+risky_threshold = 15                                 # mg/kg
+risky_df = df[df["aluminium+Silicon"] > risky_threshold]
+safe_df  = df[df["aluminium+Silicon"] <= risky_threshold]
+
+# Plot two scatter series on the same axis
+fig.add_trace(go.Scatter(name="Safe CatFine Level",  x=safe_df.imo,
+                         y=safe_df["aluminium+Silicon"], mode="markers"))
+fig.add_trace(go.Scatter(name="Risky CatFine Level", x=risky_df.imo,
+                         y=risky_df["aluminium+Silicon"], mode="markers",
+                         marker=dict(color="red")))
+
+# Continuous threshold line at 15 mg/kg
+fig.add_trace(go.Scatter(y=[15] * len(totaldf),
+                         mode="lines", line=dict(color="red", dash="dot")))
+```
+
+The BDN-vs-lab sulphur compliance check, condensed from the same template:
+
+```python
+def evaluate_sulfur(row,
+                   bdn_sulfur_unit: str = "% m/m",
+                   sulfur_unit:     str = "% m/m"):
+    if row["sulfur"] is None or row["bdnSulfur"] is None:
+        return "No Data"
+    discrepancy = abs(row["sulfur"] - row["bdnSulfur"]) / row["bdnSulfur"] * 100
+    if discrepancy > 5:
+        return "Dispute"
+    if row["sulfur"] > REGULATORY_CAP[row["zone"]]:
+        return "Non-compliant"
+    return "Compliant"
+```
+
+The ROB optimisation logic is worth quoting because it turns a 715k-row consumption collection into a per-vessel snapshot in a single aggregation:
+
+```python
+json_rob = list(common_consumption.aggregate([
+    {"$match":   {"IMO No": {"$in": active_imos}}},
+    {"$addFields": {"reportTime":
+        {"$dateToString": {"format": "%H:%M:%S", "date": "$Report Date"}}}},
+    {"$match":   {"reportTime": "12:00:00"}},     # noon report only
+    {"$sort":    {"IMO No": 1, "Report Date": -1}},
+    {"$group":   {"_id": "$IMO No", "latestRecord": {"$first": "$$ROOT"}}},
+    {"$replaceRoot": {"newRoot": "$latestRecord"}},
+]))
+# 715K records → one record per active vessel
+```
+
+---
+
+## Worked example: bad bunker on `MV POSUN`
+
+<Frame>
+**Setting**: POSUN took on 480 tonnes of VLSFO at Singapore on 2026-04-12. The lab report arrives on 2026-04-19, by which time the vessel is mid-passage to the Suez Canal — already burning the fuel.
+</Frame>
+
+| Parameter | BDN | Lab | Verdict |
+|-----------|-----|-----|---------|
+| Cat fines (Al+Si) | 24 mg/kg | **74 mg/kg** | Critical |
+| Sulphur (% m/m) | 0.42 | 0.46 | Compliant, within discrepancy tolerance |
+| Viscosity (cSt @ 50 °C) | 380 | 385 | Within engine spec |
+| Water (% v/v) | 0.30 | 0.35 | Within tolerance |
+
+**Verdict**: Critical — cat fines 14× above the 15 mg/kg engine-inlet target and 23% above the 60 mg/kg ISO cap.
+
+The pipeline:
+
+1. Tags the run with `escalation_required: true`, priority CRITICAL
+2. Routes the case to the Technical Superintendent and Commercial Operator (commercial owns the supplier dispute)
+3. Generates a 3-option recommendation with cost ranges:
+
+   - **Debunker at next port** — cleanest, supplier dispute follows. Est. USD 30–50k port costs + supplier credit recovery.
+   - **Blend with clean VLSFO at 1:3 ratio** — reduces the engine-inlet exposure to ~18 mg/kg with reliable centrifuge operation. Requires bunkering 1,440 tonnes of clean stock at next port.
+   - **Run with maximum centrifuge cleaning + frequent fuel-system inspection** — operational risk highest, cost lowest. Not recommended.
+
+4. Sends an A2A message to the TSI inbox with the full analysis package and screenshots of the lab report.
+
+---
+
+## What the senior review contains
+
+A reviewer opens the document and sees, in order:
+
+1. **Executive summary** — overall fuel posture, headline disposition
+2. **Per-bunker analysis** — every recent BDN with verdict and recommendation
+3. **Cat fines fleet view** — where this vessel sits against fleet-wide distribution
+4. **Sulphur compliance** — BDN vs lab, ECA exposure
+5. **Tank distribution &amp; ROB** — per grade, per tank, days of fuel, recommended bunker intake to reach 85%
+6. **Consumption variance** — daily vs design, weather-normalised
+7. **Stem planning** — next bunker port, lead-time vs ROB, supplier reliability
+8. **Recommendations** — prioritised by impact, with cost ranges
+9. **Escalation decision** — who owns the case and why
+
+---
+
+## When the pipeline escalates
+
+<Warning>
+The pipeline routes to the Technical Superintendent **and** the Commercial Operator simultaneously when fuel quality fails — fuel disputes are technical and commercial in equal measure, and waiting for one to brief the other costs days.
+</Warning>
+
+| Trigger | Severity | Owner |
+|---------|----------|-------|
+| Cat fines above 60 mg/kg | CRITICAL | TSI + Commercial |
+| Quality issues requiring debunkering | CRITICAL | TSI + Commercial |
+| ROB critical with no stem arranged (under 7 days) | CRITICAL | TSI + Commercial |
+| Sustained consumption variance above 10% | HIGH | TSI |
+| Sulphur breach in ECA | CRITICAL | TSI + Commercial + Master |
+| BDN-vs-lab sulphur discrepancy above 5% | HIGH | Commercial |
+
+---
+
+## Why this pipeline exists
+
+A vessel without this pipeline finds out about a bad bunker when the engineers complain about filter blockages — usually two weeks after the fuel was loaded, with several hundred running hours already on the engine. With the pipeline, the lab report and the BDN are reconciled within hours of arrival, the disposition decision is auto-routed, and the cost of doing nothing is calculated against the cost of acting.
+
+Fuel decisions are commercial and engineering — keeping them in one place keeps the right people on the same page.
+
+<CardGroup cols={2}>
+  <Card title="Source templates" icon="code">
+    Fuel-oil-analysis suite — BDN summary, tank distribution, and the fleet-wide cat-fines &amp; sulphur view.
+  </Card>
+  <Card title="Related: ME performance" icon="ship" href="/skills/me-performance">
+    SFOC and cylinder findings often confirm or rule out a fuel-quality cause.
+  </Card>
+  <Card title="Related: Lube oil" icon="droplet" href="/skills/lube-oil">
+    Wear metals are the second leading indicator of cat-fine ingress.
+  </Card>
+  <Card title="Related: Voyage" icon="route" href="/skills/voyage-analyzer">
+    ECA exposure is voyage-driven; consumption variance feeds into CP claims.
+  </Card>
+</CardGroup>
