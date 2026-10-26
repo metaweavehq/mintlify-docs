@@ -1,40 +1,446 @@
-/* Apply SF Pro across the site, fallback to system font stack */
+/*
+  Applied AI Foundation docs, in the grammar of apple.com (the apple-website-design-skill).
+  Reading pages follow Apple's long-form article template: a centred reading column, 48 / 32 / 24 heads,
+  a 21px semibold grey intro, 17px body, #0066cc links, #f5f5f7 tiles at radius 18 with no borders,
+  pill controls, a glass nav, and a true black dark theme. Mintlify owns the page shell; this file only
+  restyles it.
+*/
+
+/* ---------- tokens ---------- */
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
-    "Helvetica Neue", Arial, sans-serif;
+  --aaf-ink: #1d1d1f;
+  --aaf-ink-2: #6e6e73;
+  --aaf-ink-3: #86868b;
+  --aaf-link: #0066cc;
+  --aaf-blue: #0071e3;
+  --aaf-blue-hover: #0076df;
+  --aaf-hair: #d2d2d7;
+  --aaf-alt: #f5f5f7;
+  --aaf-alt-2: #e8e8ed;
+  --aaf-nav: rgba(255, 255, 255, .8);
+  --aaf-ground: #ffffff;
+  --aaf-hover-fill: rgba(0, 0, 0, .04);
+  --aaf-column: 760px;
+  --aaf-ease-hover: cubic-bezier(0, 0, .5, 1);
+  --aaf-ease-chrome: cubic-bezier(.4, 0, .6, 1);
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-display: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
 }
+html.dark {
+  --aaf-ink: #f5f5f7;
+  --aaf-ink-2: #86868b;
+  --aaf-ink-3: #6e6e73;
+  --aaf-link: #2997ff;
+  --aaf-blue: #0071e3;
+  --aaf-hair: #424245;
+  --aaf-alt: #1d1d1f;
+  --aaf-alt-2: #2c2c2e;
+  --aaf-nav: rgba(0, 0, 0, .64);
+  --aaf-ground: #000000;
+  --aaf-hover-fill: rgba(255, 255, 255, .06);
+}
 
-html,
-body,
-button,
-input,
-select,
-textarea,
-.font-sans {
+/* ---------- type: the system stack everywhere, Inter where SF Pro is missing ---------- */
+html, body, button, input, select, textarea, .font-sans {
   font-family: var(--font-sans) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+code, pre, kbd, samp, .font-mono { font-family: var(--font-mono) !important; }
+body { color: var(--aaf-ink); background: var(--aaf-ground); }
 
-code,
-pre,
-kbd,
-samp,
-.font-mono {
-  font-family: var(--font-mono) !important;
+/* ---------- the right-hand "On this page" panel stays hidden (frees the column) ---------- */
+aside[aria-label*="table of contents" i], aside[aria-label*="on this page" i],
+nav[aria-label*="table of contents" i], nav[aria-label*="on this page" i],
+[class*="TableOfContents"], [class*="toc-sidebar"], [id*="table-of-contents"], #table-of-contents {
+  display: none !important;
 }
 
-/* ─── Hide the right-side "On this page" TOC entirely ─── */
-/* Frees the right-side gutter so main content gets the full width.
-   Targets multiple Mintlify versions / DOM patterns. */
-aside[aria-label*="table of contents" i],
-aside[aria-label*="on this page" i],
-nav[aria-label*="table of contents" i],
-nav[aria-label*="on this page" i],
-[class*="TableOfContents"],
-[class*="toc-sidebar"],
-[id*="table-of-contents"],
-#table-of-contents {
-  display: none !important;
+/* ---------- nav: Apple's glass bar, a hairline, pill search and pill button ---------- */
+#navbar-transition {
+  background: var(--aaf-nav) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--aaf-hair) !important;
+  border-color: color-mix(in srgb, var(--aaf-hair) 70%, transparent) !important;
+}
+.nav-logo img { height: 26px !important; width: auto; }
+
+#search-bar-entry {
+  height: 36px !important;
+  border-radius: 980px !important;
+  background: var(--aaf-alt) !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  color: var(--aaf-ink-3) !important;
+  font-size: 14px !important;
+  letter-spacing: -.016em;
+  filter: none !important;
+  transition: background-color .24s var(--aaf-ease-chrome);
+}
+#search-bar-entry:hover { background: var(--aaf-alt-2) !important; }
+
+.navbar-link, .navbar-link a { font-size: 14px !important; letter-spacing: -.016em; color: var(--aaf-ink) !important; opacity: .8; }
+.navbar-link:hover, .navbar-link a:hover { opacity: 1; }
+.navbar-link a[href^="http"]::after { content: "\2009\2197"; font-size: .85em; }   /* ↗ for a link that leaves the docs */
+
+#topbar-cta-button a { padding: 7px 15px !important; font-size: 14px !important; font-weight: 400 !important; letter-spacing: -.016em; }
+#topbar-cta-button a > span:first-child { background: var(--aaf-blue) !important; border-radius: 980px !important; transition: background-color .1s linear; }
+#topbar-cta-button a:hover > span:first-child { background: var(--aaf-blue-hover) !important; opacity: 1 !important; }
+#topbar-cta-button svg { display: none !important; }   /* Apple puts no icon in a button */
+
+/* tabs: 14px grey, the current one in ink with a 2px ink underline */
+.nav-tabs { column-gap: 28px !important; }
+.nav-tabs-item { font-size: 14px !important; font-weight: 400 !important; letter-spacing: -.016em; color: var(--aaf-ink-2) !important; text-shadow: none !important; transition: color .24s var(--aaf-ease-chrome); }
+.nav-tabs-item:hover { color: var(--aaf-ink) !important; }
+.nav-tabs-item:has(> div[class*="bg-primary"]) { color: var(--aaf-ink) !important; }
+.nav-tabs-item > div[class*="bottom-0"] { height: 2px !important; background: transparent !important; }
+.nav-tabs-item > div[class*="bg-primary"] { background: var(--aaf-ink) !important; }
+
+/* ---------- sidebar: footer-style group titles, quiet links, an ink pill for the current page ---------- */
+#sidebar { font-size: 14px; }
+.sidebar-group-header, .sidebar-group-header * { font-size: 12px !important; line-height: 1.33337 !important; font-weight: 600 !important; letter-spacing: -.01em; color: var(--aaf-ink) !important; }
+.sidebar-group-header { margin-bottom: 8px !important; }
+#sidebar li a {
+  font-size: 14px !important; line-height: 1.42859 !important; letter-spacing: -.016em;
+  color: var(--aaf-ink-2) !important; text-shadow: none !important;
+  border-radius: 8px !important; padding-top: 6px !important; padding-bottom: 6px !important;
+  transition: background-color .2s var(--aaf-ease-chrome), color .2s var(--aaf-ease-chrome);
+}
+#sidebar li a:hover { background: var(--aaf-hover-fill) !important; color: var(--aaf-ink) !important; }
+#sidebar li a[class*="bg-primary"] { background: var(--aaf-alt) !important; color: var(--aaf-ink) !important; font-weight: 600 !important; }
+#sidebar li a[class*="bg-primary"] * { color: var(--aaf-ink) !important; }
+
+/* ---------- Linden shell: Apple's single bar, a hairline beside the sidebar, the column reclaimed ---------- */
+#search-bar-entry-mobile { color: var(--aaf-ink-2) !important; }
+#search-bar-entry-mobile:hover { color: var(--aaf-ink) !important; }
+@media (min-width: 1024px) {
+  /* the sidebar sits on the page ground with a hairline, and covers the band where it passes underneath */
+  #sidebar { border-right: 1px solid var(--aaf-hair); background: var(--aaf-ground); box-shadow: -32px 0 0 var(--aaf-ground); }
+}
+@media (max-width: 1023px) { html, body { overflow-x: clip; } }   /* lets the band run to the screen edges without a sideways scroll */
+
+/* Linden draws the nav button as an outline; Apple's is a filled blue pill with a white label */
+#topbar-cta-button a {
+  background: var(--aaf-blue) !important; border: 0 !important; border-radius: 980px !important;
+  color: #fff !important; transition: background-color .1s linear;
+}
+#topbar-cta-button a * { color: #fff !important; }
+#topbar-cta-button a:hover { background: var(--aaf-blue-hover) !important; }
+
+/* Linden marks the current page with blue text and a chevron; Apple uses an ink pill */
+#sidebar li a[aria-current="page"] { background: var(--aaf-alt) !important; color: var(--aaf-ink) !important; font-weight: 600 !important; border-color: transparent !important; }
+#sidebar li a[aria-current="page"] * { color: var(--aaf-ink) !important; }
+#sidebar li a svg { display: none !important; }
+#content-area {
+  max-width: none !important; width: 100% !important;
+  margin: 0 !important; padding: 0 48px !important;
+}
+
+/* every page opens on a grey title band, edge to edge across the content (developer.apple.com, the Apple guides) */
+#header { position: relative; isolation: isolate; padding: 64px 0 52px; }
+#header::before {
+  content: ""; position: absolute; z-index: -1;
+  top: -40px; bottom: 0; left: -100vw; right: -100vw;
+  background: var(--aaf-alt);
+}
+@media (max-width: 1023px) { #header::before { top: -48px; } }
+
+/* ---------- the reading column, centred, as in Apple's long-form article template ---------- */
+#header, #content, #pagination, #footer, #content-area > .feedback-toolbar {
+  max-width: var(--aaf-column);
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* page head: eyebrow 21 ink, title 48, intro 21 semibold grey */
+#header .eyebrow {
+  height: auto !important;
+  font: 600 21px/1.19048 var(--font-display) !important;
+  letter-spacing: .011em;
+  color: var(--aaf-ink) !important;
+  margin-bottom: 4px;
+}
+#page-title {
+  font: 600 48px/1.08349 var(--font-display) !important;
+  letter-spacing: -.003em !important;
+  color: var(--aaf-ink) !important;
+  word-break: normal !important;
+}
+#header > div.prose, #header > div.prose p {
+  margin-top: 12px !important;
+  font: 600 21px/1.38105 var(--font-display) !important;
+  letter-spacing: .011em !important;
+  color: var(--aaf-ink-2) !important;
+}
+
+/* body */
+.mdx-content.prose { margin-top: 56px !important; color: var(--aaf-ink); }
+.prose :where(p, li, td, th, dd) {
+  font-size: 17px !important;
+  line-height: 1.47059 !important;
+  letter-spacing: -.022em;
+  color: var(--aaf-ink);
+}
+.prose p { margin-top: 0 !important; margin-bottom: .8em !important; }
+.prose strong, .prose b { font-weight: 600; color: var(--aaf-ink); }
+
+/* heads: 32 with a keyline above, 24 under it */
+.prose h1 { font: 600 40px/1.1 var(--font-display) !important; letter-spacing: 0 !important; color: var(--aaf-ink) !important; margin: 0 0 20px !important; }
+.prose h2:not([data-component-part]) {
+  font: 600 32px/1.125 var(--font-display) !important;
+  letter-spacing: .004em !important;
+  color: var(--aaf-ink) !important;
+  margin: 56px 0 14px !important;
+  padding-top: 40px;
+  border-top: 1px solid var(--aaf-hair);
+}
+.prose > h2:first-child, .prose h1 + h2:not([data-component-part]) { margin-top: 8px !important; padding-top: 0; border-top: 0; }
+.prose h3:not([data-component-part]) { font: 600 24px/1.16667 var(--font-display) !important; letter-spacing: .009em !important; color: var(--aaf-ink) !important; margin: 40px 0 10px !important; }
+.prose h4 { font: 600 19px/1.21053 var(--font-display) !important; letter-spacing: .012em !important; color: var(--aaf-ink) !important; margin: 28px 0 8px !important; }
+
+/* a written divider right before a section head would double the keyline; the head carries it */
+.prose hr:has(+ h2) { display: none !important; }
+.prose hr { border: 0 !important; border-top: 1px solid var(--aaf-hair) !important; margin: 48px 0 !important; }
+
+/* links: blue, no underline until hover */
+.prose a:not(.card):not([class*="-ml-10"]) {
+  color: var(--aaf-link) !important;
+  text-decoration: none !important;
+  border-bottom: 0 !important;
+  font-weight: inherit;
+}
+.prose a:not(.card):not([class*="-ml-10"]):hover { text-decoration: underline !important; text-underline-offset: .12em; }
+
+/* lists */
+.prose ul, .prose ol { padding-left: 1.25em !important; margin: 0 0 1em !important; }
+.prose li { margin: .4em 0 !important; padding-left: .2em; }
+.prose ul > li::marker { color: var(--aaf-ink-3); }
+.prose ol > li::marker { color: var(--aaf-ink-2); font-weight: 600; }
+
+/* inline code and code blocks: grey fields, no borders */
+.prose :not(pre) > code {
+  font-size: 15px !important; font-weight: 400 !important;
+  background: var(--aaf-alt) !important; color: var(--aaf-ink) !important;
+  border-radius: 6px; padding: .12em .4em !important;
+}
+.prose :not(pre) > code::before, .prose :not(pre) > code::after { content: none !important; }
+.code-block {
+  border: 0 !important;
+  background: var(--aaf-alt) !important;
+  border-radius: 18px !important;
+  margin: 24px 0 32px !important;
+}
+.code-block pre { background: transparent !important; font-size: 14px !important; line-height: 1.57143 !important; }
+
+/* images and figures: a grey field, radius 18, a 12px caption */
+.prose figure.frame, figure.frame {
+  background: var(--aaf-alt) !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  padding: 0 !important;
+  margin: 32px 0 !important;
+}
+figure.frame img { border-radius: 18px !important; }
+[data-component-part="frame-caption"], figure.frame figcaption {
+  font-size: 12px !important; line-height: 1.33337 !important; letter-spacing: -.01em;
+  color: var(--aaf-ink-2) !important; padding: 12px 20px 16px !important;
+}
+
+/* tables: hairlines only */
+.prose table { font-size: 17px; border-collapse: collapse; }
+.prose thead th { font-weight: 600 !important; color: var(--aaf-ink) !important; border-bottom: 1px solid var(--aaf-hair) !important; }
+.prose tbody td { border-bottom: 1px solid var(--aaf-hair) !important; color: var(--aaf-ink) !important; }
+
+/* blockquote as an Apple pull line */
+.prose blockquote { border-left: 0 !important; padding-left: 0 !important; font-style: normal !important; }
+.prose blockquote p { font: 600 21px/1.38105 var(--font-display) !important; letter-spacing: .011em; color: var(--aaf-ink-2) !important; }
+.prose blockquote p::before, .prose blockquote p::after { content: none !important; }
+
+/* ---------- cards: Apple tiles, #f5f5f7 at radius 18, no border, a quiet hover ---------- */
+.card {
+  border: 0 !important;
+  background: var(--aaf-alt) !important;
+  border-radius: 18px !important;
+  box-shadow: none !important;
+  --tw-ring-color: transparent !important;
+  transition: transform .3s var(--aaf-ease-hover) !important;
+  margin: 10px 0 !important;
+}
+.card:hover { transform: scale(1.016); }
+.card [data-component-part="card-content-container"] { padding: 28px 30px 30px !important; }
+.card [data-component-part="card-icon"], .card [data-component-part="card-icon"] * { color: var(--aaf-blue) !important; background-color: currentColor; }
+.card [data-component-part="card-icon"] { background-color: transparent !important; }
+.card [data-component-part="card-title"] {
+  font: 600 21px/1.19048 var(--font-display) !important;
+  letter-spacing: .011em !important;
+  color: var(--aaf-ink) !important;
+  margin: 14px 0 0 !important; padding: 0 !important; border: 0 !important;
+}
+.card [data-component-part="card-content"], .card [data-component-part="card-content"] p {
+  font-size: 17px !important; line-height: 1.47059 !important; letter-spacing: -.022em;
+  color: var(--aaf-ink-2) !important; margin-top: 6px;
+}
+html.dark .card { background: var(--aaf-alt) !important; }
+
+/* callouts, tabs and accordions: grey fields, hairlines, no colour wash */
+.callout, [class*="callout"] { border: 0 !important; border-radius: 18px !important; }
+.prose details { border: 0 !important; border-top: 1px solid var(--aaf-hair) !important; border-radius: 0 !important; }
+.prose details summary { font: 600 21px/1.19048 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink); padding: 18px 0; }
+
+/* ---------- pagination and footer: utility voice, small and grey ---------- */
+#pagination { margin-top: 64px !important; padding-top: 24px; border-top: 1px solid var(--aaf-hair); }
+#pagination a, #pagination [data-component-part="pagination-title"] {
+  font-size: 17px !important; font-weight: 400 !important; letter-spacing: -.022em;
+  color: var(--aaf-link) !important;
+}
+#pagination a:hover [data-component-part="pagination-title"] { text-decoration: underline; }
+#pagination svg { color: var(--aaf-link) !important; }
+#footer { border-top: 1px solid var(--aaf-hair) !important; margin-top: 40px; }
+#footer, #footer * { font-size: 12px; letter-spacing: -.01em; }
+#footer a, #footer svg { color: var(--aaf-ink-2) !important; }
+#footer a:hover, #footer a:hover svg { color: var(--aaf-ink) !important; }
+
+/* ---------- the assistant bar, when it shows: Apple's search field ---------- */
+.chat-assistant-floating-input [class*="rounded-2xl"] {
+  border-radius: 28px !important;
+  border: 1px solid var(--aaf-hair) !important;
+  background: var(--aaf-ground) !important;
+}
+
+/* ---------- breakpoints: each head steps down one rung at 1068 and again at 734 ---------- */
+@media (max-width: 1068px) {
+  #page-title { font-size: 40px !important; line-height: 1.1 !important; letter-spacing: 0 !important; }
+  #header > div.prose, #header > div.prose p { font-size: 19px !important; line-height: 1.42115 !important; letter-spacing: .012em !important; }
+  .prose h2:not([data-component-part]) { font-size: 28px !important; line-height: 1.14286 !important; letter-spacing: .007em !important; }
+  .prose h3:not([data-component-part]) { font-size: 21px !important; line-height: 1.19048 !important; letter-spacing: .011em !important; }
+}
+@media (max-width: 734px) {
+  #content-area { padding: 0 20px !important; }
+  #header { padding: 40px 0 36px; }
+  #header .eyebrow { font-size: 19px !important; line-height: 1.21053 !important; }
+  #page-title { font-size: 32px !important; line-height: 1.125 !important; letter-spacing: .004em !important; }
+  #header > div.prose, #header > div.prose p { font-size: 17px !important; line-height: 1.47059 !important; letter-spacing: -.022em !important; }
+  .mdx-content.prose { margin-top: 32px !important; }
+  .prose h2:not([data-component-part]) { font-size: 24px !important; line-height: 1.16667 !important; letter-spacing: .009em !important; margin-top: 40px !important; padding-top: 28px; }
+  .prose h3:not([data-component-part]) { font-size: 19px !important; line-height: 1.21053 !important; letter-spacing: .012em !important; }
+  .card [data-component-part="card-content-container"] { padding: 22px 22px 24px !important; }
+  .card [data-component-part="card-title"] { font-size: 19px !important; line-height: 1.21053 !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card { transition: none !important; }
+  .card:hover { transform: none; }
+}
+
+/* ---------- the docs home: an Apple index page (custom mode) ---------- */
+body:has(#navbar.is-custom) #content, body:has(#navbar.is-custom) #content-area { max-width: none !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+.aaf-landing { color: var(--aaf-ink); font-family: var(--font-sans); width: 100%; }
+.aaf-landing a { text-decoration: none !important; }
+.aaf-wrap { width: 87.5%; max-width: 980px; margin: 0 auto; }
+.aaf-hero { background: var(--aaf-alt); padding: 104px 0 96px; }
+.aaf-hero-grid { display: grid; grid-template-columns: 1fr 240px; gap: 56px; align-items: center; }
+.aaf-eyebrow { margin: 0; font: 600 21px/1.19048 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink); }
+.aaf-hero-title { margin: 10px 0 0; font: 600 64px/1.0625 var(--font-display); letter-spacing: -.009em; color: var(--aaf-ink); }
+.aaf-hero-intro { margin: 20px 0 0; max-width: 600px; font: 600 21px/1.38105 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink-2); }
+.aaf-hero-links { margin: 26px 0 0; font-size: 21px; }
+.aaf-hero-mark { width: 240px; height: 240px; margin: 0 !important; border: 0 !important; }
+.aaf-more { color: var(--aaf-link) !important; font-weight: 400; letter-spacing: -.022em; }
+.aaf-more::after { content: "\2009\203A"; }
+.aaf-more.aaf-ext::after { content: "\2009\2197"; font-size: .85em; }
+a.aaf-more:hover, .aaf-tile:hover .aaf-more { text-decoration: underline !important; text-underline-offset: .12em; }
+.aaf-section { padding: 100px 0; }
+.aaf-on-white { background: var(--aaf-ground); }
+.aaf-on-grey { background: var(--aaf-alt); }
+.aaf-headline { margin: 0; font: 600 40px/1.1 var(--font-display); letter-spacing: 0; color: var(--aaf-ink); border: 0 !important; padding: 0 !important; }
+.aaf-intro { margin: 20px 0 0; max-width: 760px; font: 600 21px/1.38105 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink-2); }
+.aaf-intro b { color: var(--aaf-ink); font-weight: 600; }
+.aaf-links { margin: 24px 0 0; font-size: 17px; }
+.aaf-tiles { display: grid; gap: 20px; margin-top: 40px; }
+.aaf-four { grid-template-columns: repeat(4, 1fr); }
+.aaf-two { grid-template-columns: repeat(2, 1fr); }
+.aaf-tile {
+  display: flex; flex-direction: column; gap: 8px; min-height: 220px;
+  padding: 30px 30px 28px; border-radius: 18px;
+  background: var(--aaf-alt); color: var(--aaf-ink) !important;
+  transition: transform .3s var(--aaf-ease-hover);
+}
+.aaf-on-grey .aaf-tile { background: var(--aaf-ground); }
+.aaf-tile:hover { transform: scale(1.016); }
+.aaf-tile h3 { margin: 0; font: 600 21px/1.19048 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink); }
+.aaf-tile p { margin: 0; font-size: 17px; line-height: 1.47059; letter-spacing: -.022em; color: var(--aaf-ink-2); }
+.aaf-tile .aaf-more { margin-top: auto; padding-top: 12px; font-size: 17px; }
+.aaf-keylines { list-style: none; margin: 36px 0 0; padding: 0; max-width: 760px; }
+.aaf-keylines li { display: grid; grid-template-columns: 220px 1fr; gap: 24px; padding: 18px 0; border-top: 1px solid var(--aaf-hair); font-size: 17px; line-height: 1.47059; letter-spacing: -.022em; }
+.aaf-keylines li:last-child { border-bottom: 1px solid var(--aaf-hair); }
+.aaf-keylines b { font: 600 21px/1.19048 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink); }
+.aaf-keylines span { color: var(--aaf-ink-2); }
+@media (max-width: 1068px) {
+  .aaf-hero-title { font-size: 56px; line-height: 1.07143; letter-spacing: -.005em; }
+  .aaf-four { grid-template-columns: repeat(2, 1fr); }
+  .aaf-section { padding: 80px 0; }
+  .aaf-headline { font-size: 32px; line-height: 1.125; letter-spacing: .004em; }
+}
+@media (max-width: 734px) {
+  .aaf-hero { padding: 64px 0 56px; }
+  .aaf-hero-grid { grid-template-columns: 1fr; gap: 32px; }
+  .aaf-hero-mark { width: 120px; height: 120px; order: -1; }
+  .aaf-hero-title { font-size: 40px; line-height: 1.1; letter-spacing: 0; }
+  .aaf-hero-intro, .aaf-intro { font-size: 19px; line-height: 1.42115; letter-spacing: .012em; }
+  .aaf-four, .aaf-two { grid-template-columns: 1fr; }
+  .aaf-section { padding: 64px 0; }
+  .aaf-headline { font-size: 28px; line-height: 1.14286; letter-spacing: .007em; }
+  .aaf-tile { min-height: 0; }
+  .aaf-keylines li { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* ---------- the Welcome page: Apple's developer-docs landing (title band, overview, topics) ---------- */
+.aaf-dev .aaf-wrap { max-width: 980px; }
+.aaf-dev-band { background: var(--aaf-alt); padding: 88px 0 72px; }
+.aaf-dev-band-grid { display: grid; grid-template-columns: 1fr 180px; gap: 48px; align-items: center; }
+.aaf-dev-title { margin: 8px 0 0; font: 600 64px/1.0625 var(--font-display); letter-spacing: -.009em; color: var(--aaf-ink); }
+.aaf-dev-abstract { margin: 16px 0 0; max-width: 640px; font: 600 21px/1.38105 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink-2); }
+.aaf-dev-availability { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 0; padding: 0; }
+.aaf-dev-availability li { margin: 0; padding: 5px 12px; border-radius: 980px; background: var(--aaf-ground); font-size: 12px; line-height: 1.33337; letter-spacing: -.01em; color: var(--aaf-ink-2); }
+.aaf-dev-mark { width: 180px; height: 180px; margin: 0 !important; border: 0 !important; justify-self: end; }
+.aaf-dev-section { padding: 64px 0 0; }
+.aaf-dev-section:last-of-type { padding-bottom: 96px; }
+.aaf-dev-h2 { margin: 0 0 24px; padding-bottom: 14px; border-bottom: 1px solid var(--aaf-hair); font: 600 32px/1.125 var(--font-display); letter-spacing: .004em; color: var(--aaf-ink); }
+.aaf-dev-copy { max-width: 760px; }
+.aaf-dev-copy p { margin: 0 0 .8em; font-size: 17px; line-height: 1.47059; letter-spacing: -.022em; color: var(--aaf-ink); }
+.aaf-dev-copy .aaf-dev-note { margin-top: 1.4em; font-size: 14px; line-height: 1.42859; letter-spacing: -.016em; color: var(--aaf-ink-2); }
+.aaf-dev-links { display: flex; flex-wrap: wrap; gap: 8px 30px; margin-top: 20px !important; }
+.aaf-dev-topics { list-style: none; margin: 0; padding: 0; }
+.aaf-dev-topics li {
+  display: grid; grid-template-columns: 40px 1fr auto; gap: 18px; align-items: start;
+  margin: 0; padding: 20px 0; border-bottom: 1px solid var(--aaf-hair);
+}
+.aaf-dev-glyph { width: 40px; height: 40px; border-radius: 10px; background: var(--aaf-alt); display: grid; place-items: center; }
+.aaf-dev-glyph svg { width: 22px; height: 22px; fill: none; stroke: var(--aaf-blue); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.aaf-dev-topics h3 { margin: 0; font: 600 21px/1.19048 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink); }
+.aaf-dev-topics p { margin: 6px 0 0; font-size: 17px; line-height: 1.47059; letter-spacing: -.022em; color: var(--aaf-ink-2); }
+/* Apple's badge: orange text on a faint orange fill, radius 6 */
+.aaf-badge { align-self: center; padding: 4px 8px; border-radius: 6px; background: rgba(245, 99, 0, .1); color: #b64400; font: 600 12px/1.33337 var(--font-sans); letter-spacing: -.01em; white-space: nowrap; }
+html.dark .aaf-badge { background: rgba(245, 99, 0, .2); color: #ff791b; }
+.aaf-dev-foot { padding: 28px 0 40px; border-top: 1px solid var(--aaf-hair); }
+.aaf-dev-foot p { margin: 0; font-size: 12px; line-height: 1.33337; letter-spacing: -.01em; color: var(--aaf-ink-2); }
+.aaf-dev-foot a { color: var(--aaf-ink-2) !important; } .aaf-dev-foot a:hover { color: var(--aaf-ink) !important; }
+@media (max-width: 1068px) { .aaf-dev-title { font-size: 56px; line-height: 1.07143; letter-spacing: -.005em; } .aaf-dev-h2 { font-size: 28px; line-height: 1.14286; letter-spacing: .007em; } }
+@media (max-width: 734px) {
+  .aaf-dev-band { padding: 56px 0 48px; }
+  .aaf-dev-band-grid { grid-template-columns: 1fr; gap: 24px; }
+  .aaf-dev-mark { width: 96px; height: 96px; justify-self: start; order: -1; }
+  .aaf-dev-title { font-size: 40px; line-height: 1.1; letter-spacing: 0; }
+  .aaf-dev-abstract { font-size: 19px; line-height: 1.42115; letter-spacing: .012em; }
+  .aaf-dev-section { padding-top: 48px; }
+  .aaf-dev-h2 { font-size: 24px; line-height: 1.16667; letter-spacing: .009em; }
+  .aaf-dev-topics li { grid-template-columns: 36px 1fr; }
+  .aaf-dev-topics .aaf-badge { grid-column: 2; justify-self: start; }
+}
+
+/* one page needs no phone menu or breadcrumb; pull the band up to the bar */
+@media (max-width: 1023px) {
+  #navbar.is-custom button[class*="h-14"][class*="lg:hidden"] { display: none !important; }
+  body:has(#navbar.is-custom) #content-area { margin-top: -56px !important; }
 }

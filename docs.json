@@ -1,11 +1,17 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "linden",
   "name": "Applied AI Foundation",
   "colors": {
-    "primary": "#111111",
-    "light": "#9CA3AF",
-    "dark": "#000000"
+    "primary": "#0071e3",
+    "light": "#2997ff",
+    "dark": "#0071e3"
+  },
+  "background": {
+    "color": {
+      "light": "#ffffff",
+      "dark": "#000000"
+    }
   },
   "favicon": "/favicon.svg",
   "appearance": {
@@ -17,244 +23,14 @@
     "content-width": "wide"
   },
   "fonts": {
-    "family": "SF Pro Display"
+    "family": "Inter"
   },
   "navigation": {
-    "tabs": [
+    "groups": [
       {
-        "tab": "Agents",
-        "groups": [
-          {
-            "group": "Agents",
-            "pages": [
-              "agents/overview"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Skills",
-        "groups": [
-          {
-            "group": " ",
-            "pages": [
-              "skills/overview",
-              "skills/ae-performance",
-              "skills/certificates",
-              "skills/class",
-              "skills/compliance",
-              "skills/crew",
-              "skills/defects",
-              "skills/download-flag-circulars",
-              "skills/download-makers-circulars",
-              "skills/emissions",
-              "skills/financial",
-              "skills/forms",
-              "skills/fuel-oil",
-              "skills/ihm",
-              "skills/image-analysis",
-              "skills/image-generator",
-              "skills/lsa",
-              "skills/lube-oil",
-              "skills/maritime-report-generator",
-              "skills/me-performance",
-              "skills/outlook-email-sync",
-              "skills/pdf-to-markdown",
-              "skills/pdf-vision-extractor",
-              "skills/pms",
-              "skills/purchase",
-              "skills/qhse-investigation-report",
-              "skills/search-indexed-documents",
-              "skills/validate-consumption-log-data",
-              "skills/vessel-intelligence",
-              "skills/voyage",
-              "skills/water-treatment"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Microapps",
-        "groups": [
-          {
-            "group": " ",
-            "pages": [
-              "microapps/overview",
-              {
-                "group": "Emissions Dashboard",
-                "pages": [
-                  "microapps/emissions/introduction",
-                  "microapps/emissions/quickstart",
-                  {
-                    "group": "Compliance Frameworks",
-                    "pages": [
-                      "microapps/emissions/concepts/compliance-overview",
-                      "microapps/emissions/concepts/cii",
-                      "microapps/emissions/concepts/eu-ets",
-                      "microapps/emissions/concepts/fuel-eu",
-                      "microapps/emissions/concepts/eu-mrv",
-                      "microapps/emissions/concepts/imo-dcs"
-                    ]
-                  },
-                  {
-                    "group": "Product Tour",
-                    "pages": [
-                      "microapps/emissions/product/fleet-overview",
-                      "microapps/emissions/product/vessel-detail",
-                      "microapps/emissions/product/eu-ets-dashboard",
-                      "microapps/emissions/product/fuel-eu-dashboard",
-                      "microapps/emissions/product/voyage-maps",
-                      "microapps/emissions/product/reports-hub",
-                      "microapps/emissions/product/data-upload",
-                      "microapps/emissions/product/methodology-explorer"
-                    ]
-                  },
-                  {
-                    "group": "Methodology",
-                    "pages": [
-                      "microapps/emissions/methodology/cii-formulas",
-                      "microapps/emissions/methodology/reefer-correction",
-                      "microapps/emissions/methodology/eu-ets-coverage",
-                      "microapps/emissions/methodology/fuel-eu-wtw",
-                      "microapps/emissions/methodology/eeoi"
-                    ]
-                  },
-                  {
-                    "group": "Data",
-                    "pages": [
-                      "microapps/emissions/data/excel-upload-format",
-                      "microapps/emissions/data/vessel-onboarding",
-                      "microapps/emissions/data/data-model"
-                    ]
-                  },
-                  {
-                    "group": "Internal",
-                    "pages": [
-                      "microapps/emissions/internal/architecture",
-                      "microapps/emissions/internal/tech-stack",
-                      "microapps/emissions/internal/database-postgres",
-                      "microapps/emissions/internal/services-layer",
-                      "microapps/emissions/internal/environment-variables",
-                      "microapps/emissions/internal/local-development"
-                    ]
-                  }
-                ]
-              },
-              {
-                "group": "Voyage Reports",
-                "pages": [
-                  "microapps/voyage-reports/introduction",
-                  "microapps/voyage-reports/quickstart",
-                  {
-                    "group": "The Form",
-                    "pages": [
-                      "microapps/voyage-reports/form/overview",
-                      "microapps/voyage-reports/form/filling-reports",
-                      "microapps/voyage-reports/form/submitting",
-                      "microapps/voyage-reports/form/validation",
-                      "microapps/voyage-reports/form/guidelines-pdf"
-                    ]
-                  },
-                  {
-                    "group": "History Viewer",
-                    "pages": [
-                      "microapps/voyage-reports/history/overview",
-                      "microapps/voyage-reports/history/viewing",
-                      "microapps/voyage-reports/history/setup",
-                      "microapps/voyage-reports/history/data-format",
-                      "microapps/voyage-reports/history/bootstrap-scripts"
-                    ]
-                  },
-                  {
-                    "group": "Guidelines",
-                    "pages": [
-                      "microapps/voyage-reports/guidelines/forms-guidelines",
-                      "microapps/voyage-reports/guidelines/event-scenarios",
-                      "microapps/voyage-reports/guidelines/cargo-discharge-heating",
-                      "microapps/voyage-reports/guidelines/sts-ice-emergency",
-                      "microapps/voyage-reports/guidelines/new-reports",
-                      "microapps/voyage-reports/guidelines/bunker-report",
-                      "microapps/voyage-reports/guidelines/settings-history"
-                    ]
-                  },
-                  {
-                    "group": "Ingest Pipeline",
-                    "pages": [
-                      "microapps/voyage-reports/pipeline/overview",
-                      "microapps/voyage-reports/pipeline/installation",
-                      "microapps/voyage-reports/pipeline/running",
-                      "microapps/voyage-reports/pipeline/etl-stages",
-                      "microapps/voyage-reports/pipeline/data-model",
-                      "microapps/voyage-reports/pipeline/configuration"
-                    ]
-                  }
-                ]
-              },
-              {
-                "group": "BWTS Monitoring",
-                "pages": [
-                  "microapps/bwts/introduction",
-                  "microapps/bwts/quickstart",
-                  {
-                    "group": "Concepts",
-                    "pages": [
-                      "microapps/bwts/concepts/bwts-overview",
-                      "microapps/bwts/concepts/uv-disinfection",
-                      "microapps/bwts/concepts/imo-d2-regulation",
-                      "microapps/bwts/concepts/uscg-standards"
-                    ]
-                  },
-                  {
-                    "group": "Product Tour",
-                    "pages": [
-                      "microapps/bwts/product/overview-tab",
-                      "microapps/bwts/product/predictive-maintenance-tab",
-                      "microapps/bwts/product/trend-analysis-tab",
-                      "microapps/bwts/product/compliance-tab",
-                      "microapps/bwts/product/comparative-analysis-tab",
-                      "microapps/bwts/product/data-export-tab"
-                    ]
-                  },
-                  {
-                    "group": "Methodology",
-                    "pages": [
-                      "microapps/bwts/methodology/health-score",
-                      "microapps/bwts/methodology/rul-algorithm",
-                      "microapps/bwts/methodology/uv-thresholds",
-                      "microapps/bwts/methodology/progressive-loading"
-                    ]
-                  },
-                  {
-                    "group": "Data Reference",
-                    "pages": [
-                      "microapps/bwts/data/schema-overview",
-                      "microapps/bwts/data/telemetry-fields",
-                      "microapps/bwts/data/api-reference"
-                    ]
-                  },
-                  {
-                    "group": "Internal Engineering",
-                    "pages": [
-                      "microapps/bwts/internal/architecture",
-                      "microapps/bwts/internal/tech-stack",
-                      "microapps/bwts/internal/environment-variables"
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Document Search",
-        "groups": [
-          {
-            "group": "Document Search",
-            "pages": [
-              "document-search/overview"
-            ]
-          }
+        "group": "Welcome",
+        "pages": [
+          "index"
         ]
       }
     ]
@@ -272,13 +48,12 @@
     ],
     "primary": {
       "type": "button",
-      "label": "Get Started",
-      "href": "/agents/overview"
+      "label": "Contact us",
+      "href": "https://appliedaifoundation.org/demo"
     }
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/metaweavehq",
       "linkedin": "https://linkedin.com/company/applied-ai-foundation"
     }
   }

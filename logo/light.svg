@@ -1,9 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 44" fill="none">
-  <rect x="2" y="6" width="32" height="32" rx="8" fill="#000000"/>
-  <g transform="translate(18 22) scale(0.085)">
-    <path d="M 0 -160 Q 20 -20, 160 0 Q 20 20, 0 160 Q -20 20, -160 0 Q -20 -20, 0 -160 Z" fill="#FFFFFF"/>
-    <circle cx="0" cy="0" r="32" fill="#000000"/>
-    <circle cx="0" cy="0" r="16" fill="#FFFFFF"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 44" fill="none">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2997ff"/><stop offset=".55" stop-color="#0071e3"/><stop offset="1" stop-color="#5e5ce6"/></linearGradient>
+    <radialGradient id="dot" cx=".35" cy=".35" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#9fd0ff"/><stop offset="1" stop-color="#0071e3"/></radialGradient>
+  </defs>
+  <g transform="translate(0 4) scale(0.5625)">
+    <circle cx="32" cy="32" r="22" fill="none" stroke="url(#g)" stroke-width="3.4"/>
+    <ellipse cx="32" cy="32" rx="30" ry="9.5" fill="none" stroke="url(#g)" stroke-width="1.6" transform="rotate(-18 32 32)" opacity=".9"/>
+    <line x1="12" y1="32" x2="52" y2="32" stroke="url(#g)" stroke-width="1.2" opacity=".55"/>
+    <circle cx="57.6" cy="23.6" r="3.2" fill="url(#dot)"/>
   </g>
-  <text x="46" y="30" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif" font-size="26" font-weight="600" fill="#111111">Applied AI Foundation</text>
+  <text x="46" y="30" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif" font-size="24" font-weight="600" letter-spacing="-0.4" fill="#1d1d1f">Applied AI Foundation</text>
 </svg>
