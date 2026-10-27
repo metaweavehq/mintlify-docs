@@ -1,74 +1,172 @@
 ---
-title: "Welcome"
-description: "LifeOS is AI that remembers everything, so you never start from zero."
+title: "Documentation"
+description: "Documentation for LifeOS, The Living Office and the apps of the Applied AI Foundation."
 mode: "custom"
 ---
 
-<div className="aaf-landing aaf-dev">
+{/*
+  The docs home, laid out as an apple.com product hub (apple-website-design-skill, pages/product-hubs.md):
+  ribbon, the bare title with a chapternav, the priority router, a topic rail, the index section, the footer.
+  A hub routes and never explains, so the only sentence about the rewrite sits in the ribbon.
+  Product lines are the approved lines from appliedaifoundation.org. Topic pages are added one at a time,
+  after review and Prashant's go; until then each tile is marked "In progress".
+*/}
 
-<section className="aaf-dev-band">
-  <div className="aaf-wrap aaf-dev-band-grid">
-    <div>
-      <p className="aaf-eyebrow">Documentation</p>
-      <h1 className="aaf-dev-title">LifeOS</h1>
-      <p className="aaf-dev-abstract">LifeOS is AI that remembers everything, so you never start from zero.</p>
-      <ul className="aaf-dev-availability" aria-label="Where it runs">
-        <li>Laptop</li>
-        <li>Your cloud</li>
-        <li>Dedicated server</li>
-      </ul>
-    </div>
-    <img className="aaf-dev-mark" src="/favicon.svg" alt="" noZoom />
+<div className="aaf-hub">
+
+<div className="aaf-ribbon">
+  <p>This documentation is being rewritten. Each topic appears here once it has been reviewed. <a href="https://appliedaifoundation.org/demo">Contact us ›</a></p>
+</div>
+
+<section className="aaf-hub-head" aria-labelledby="aaf-hub-title">
+  <div className="aaf-col">
+    <h1 className="aaf-hub-title" id="aaf-hub-title">Documentation</h1>
   </div>
-</section>
-
-<section className="aaf-dev-section">
-  <div className="aaf-wrap">
-    <h2 className="aaf-dev-h2">Overview</h2>
-    <div className="aaf-dev-copy">
-      <p>The Living Office reads the mail, systems and files you already run, and changes none of them. Every email, report and photo you receive is read, filed against the right case and turned into follow-up work, in one shared place.</p>
-      <p>Agents read, file, draft and chase around the clock, and nothing leaves without a person.</p>
-      <p className="aaf-dev-note">This documentation is being rewritten. Each topic below appears here once it has been reviewed.</p>
-      <p className="aaf-dev-links"><a className="aaf-more" href="https://appliedaifoundation.org/demo">Contact us</a><a className="aaf-more aaf-ext" href="https://appliedaifoundation.org">Visit appliedaifoundation.org</a></p>
-    </div>
-  </div>
-</section>
-
-<section className="aaf-dev-section">
-  <div className="aaf-wrap">
-    <h2 className="aaf-dev-h2">Topics</h2>
-    <ul className="aaf-dev-topics">
-      <li>
-        <span className="aaf-dev-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 0 17a8.5 8.5 0 1 0 0-17Z"/><path d="M2.2 15.4c-.7-2.1 3.6-5.3 9.4-7.2s10.9-1.6 11.6.5"/></svg></span>
-        <div><h3>Architecture</h3><p>The Living Office, memory and the models behind it.</p></div>
-        <span className="aaf-badge">In progress</span>
-      </li>
-      <li>
-        <span className="aaf-dev-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span>
-        <div><h3>Security</h3><p>Access, data, approvals and audit.</p></div>
-        <span className="aaf-badge">In progress</span>
-      </li>
-      <li>
-        <span className="aaf-dev-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5 19 6v5.5c0 4.3-2.9 7.7-7 9-4.1-1.3-7-4.7-7-9V6l7-2.5Z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg></span>
-        <div><h3>Guardrails</h3><p>What agents may and may not do.</p></div>
-        <span className="aaf-badge">In progress</span>
-      </li>
-      <li>
-        <span className="aaf-dev-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="11" rx="2"/><path d="M2.5 19h19"/></svg></span>
-        <div><h3>Deployment</h3><p>Your laptop, your cloud, or a dedicated server.</p></div>
-        <span className="aaf-badge">In progress</span>
-      </li>
-      <li>
-        <span className="aaf-dev-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4.5 6.5h15v9h-8l-4.5 3.5v-3.5H4.5z"/></svg></span>
-        <div><h3>Working with us</h3><p>Getting started, and answers to common questions.</p></div>
-        <span className="aaf-badge">In progress</span>
-      </li>
+  <div className="aaf-chapternav" role="navigation" aria-label="Documentation">
+    <ul>
+      <li><a href="#lifeos"><span className="aaf-cn-icon"><img src="/favicon.svg" alt="" noZoom /></span><span className="aaf-cn-label">LifeOS</span></a></li>
+      <li><a href="#living-office"><span className="aaf-cn-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 40a16 16 0 0 1 32 0"/><path d="M24 40 10 14M24 40 19 9M24 40l6-31M24 40l14-26M24 40 4 28M24 40l20-12"/><path d="M4 40h40"/></svg></span><span className="aaf-cn-label">Living Office</span></a></li>
+      <li><a href="#apps"><span className="aaf-cn-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="7" width="15" height="15" rx="4"/><rect x="26" y="7" width="15" height="15" rx="4"/><rect x="7" y="26" width="15" height="15" rx="4"/><rect x="26" y="26" width="15" height="15" rx="4"/></svg></span><span className="aaf-cn-label">Apps</span></a></li>
+      <li><a href="#architecture"><span className="aaf-cn-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 7 41 16 24 25 7 16Z"/><path d="M7 24l17 9 17-9"/><path d="M7 32l17 9 17-9"/></svg></span><span className="aaf-cn-label">Architecture</span></a></li>
+      <li><a href="#security"><span className="aaf-cn-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="21" width="28" height="20" rx="5"/><path d="M17 21v-5a7 7 0 0 1 14 0v5"/><path d="M24 29v4"/></svg></span><span className="aaf-cn-label">Security</span></a></li>
+      <li><a href="#guardrails"><span className="aaf-cn-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6 38 11v11c0 8.6-5.8 15.4-14 18-8.2-2.6-14-9.4-14-18V11Z"/><path d="m18 23.5 4.4 4.4L31 19.5"/></svg></span><span className="aaf-cn-label">Guardrails</span></a></li>
+      <li><a href="#deployment"><span className="aaf-cn-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="10" width="34" height="22" rx="4"/><path d="M4 38h40"/></svg></span><span className="aaf-cn-label">Deployment</span></a></li>
+      <li><a href="#working-with-us"><span className="aaf-cn-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 12h32v19H23l-9 7v-7H8Z"/></svg></span><span className="aaf-cn-label">Working with us</span></a></li>
     </ul>
   </div>
 </section>
 
-<div className="aaf-dev-foot">
-  <div className="aaf-wrap">
+<section className="aaf-router" aria-label="Products" data-aaf-slideshow>
+  <ul className="aaf-router-track">
+    <li className="aaf-router-card aaf-dark" id="lifeos">
+      <img className="aaf-router-img" src="/images/hub/lifeos.jpg" alt="An iPhone showing a LifeOS chat in which a new team, Home and Family, is set up with three agents." noZoom />
+      <img className="aaf-router-img aaf-m" src="/images/hub/lifeos-m.jpg" alt="" noZoom />
+      <div className="aaf-router-copy">
+        <h2>LifeOS</h2>
+        <p>Never start from zero.</p>
+      </div>
+      <div className="aaf-router-ctas">
+        <a className="aaf-pill" href="https://appliedaifoundation.org" target="_blank" rel="noopener">Learn more</a>
+        <span className="aaf-status">Docs in progress</span>
+      </div>
+    </li>
+    <li className="aaf-router-card aaf-light" id="apps">
+      <img className="aaf-router-img" src="/images/hub/apps.jpg" alt="A suite of dashboards: revenue, customer lifetime, growth, acquisition cost and where the time goes." noZoom />
+      <img className="aaf-router-img aaf-m" src="/images/hub/apps-m.jpg" alt="" noZoom />
+      <div className="aaf-router-copy">
+        <h2>Apps</h2>
+        <p>The apps we run today.</p>
+      </div>
+      <div className="aaf-router-ctas">
+        <a className="aaf-pill" href="https://appliedaifoundation.org/apps.html" target="_blank" rel="noopener">Learn more</a>
+        <span className="aaf-status">Docs in progress</span>
+      </div>
+    </li>
+    <li className="aaf-router-card aaf-dark" id="living-office">
+      <img className="aaf-router-img" src="/images/hub/office.jpg" alt="The Living Office drawing in mail, portals, files, reports, exports and photos." noZoom />
+      <img className="aaf-router-img aaf-m" src="/images/hub/office-m.jpg" alt="" noZoom />
+      <div className="aaf-router-copy">
+        <h2>The Living Office</h2>
+        <p>Where your memory lives.</p>
+      </div>
+      <div className="aaf-router-ctas">
+        <a className="aaf-pill" href="https://appliedaifoundation.org/memory.html" target="_blank" rel="noopener">Learn more</a>
+        <span className="aaf-status">Docs in progress</span>
+      </div>
+    </li>
+  </ul>
+  <div className="aaf-dotnav">
+    <div className="aaf-dots" role="tablist" aria-label="Choose a product">
+      <button type="button" role="tab" aria-label="LifeOS" aria-selected="true"><span></span></button>
+      <button type="button" role="tab" aria-label="Apps" aria-selected="false"><span></span></button>
+      <button type="button" role="tab" aria-label="The Living Office" aria-selected="false"><span></span></button>
+    </div>
+    <button type="button" className="aaf-play" aria-label="Pause">
+      <svg viewBox="0 0 16 16" className="aaf-i-pause" aria-hidden="true"><path d="M5 3.5v9M11 3.5v9"/></svg>
+      <svg viewBox="0 0 16 16" className="aaf-i-play" aria-hidden="true"><path d="M5 3.2v9.6L12.6 8Z"/></svg>
+    </button>
+  </div>
+</section>
+
+<section className="aaf-lineup" aria-labelledby="aaf-topics-title" data-aaf-rail>
+  <div className="aaf-col">
+    <h2 className="aaf-hub-headline" id="aaf-topics-title">Get to know the platform.</h2>
+  </div>
+  <ul className="aaf-rail">
+    <li className="aaf-topic" id="architecture">
+      <div className="aaf-topic-frame"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 7 41 16 24 25 7 16Z"/><path d="M7 24l17 9 17-9"/><path d="M7 32l17 9 17-9"/></svg></div>
+      <span className="aaf-badge">In progress</span>
+      <h3>Architecture</h3>
+      <p>The Living Office, memory and the models behind them.</p>
+    </li>
+    <li className="aaf-topic" id="security">
+      <div className="aaf-topic-frame"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="21" width="28" height="20" rx="5"/><path d="M17 21v-5a7 7 0 0 1 14 0v5"/><path d="M24 29v4"/></svg></div>
+      <span className="aaf-badge">In progress</span>
+      <h3>Security</h3>
+      <p>Access, data, approvals and audit.</p>
+    </li>
+    <li className="aaf-topic" id="guardrails">
+      <div className="aaf-topic-frame"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6 38 11v11c0 8.6-5.8 15.4-14 18-8.2-2.6-14-9.4-14-18V11Z"/><path d="m18 23.5 4.4 4.4L31 19.5"/></svg></div>
+      <span className="aaf-badge">In progress</span>
+      <h3>Guardrails</h3>
+      <p>What agents may do, and what waits for a person.</p>
+    </li>
+    <li className="aaf-topic" id="deployment">
+      <div className="aaf-topic-frame"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="10" width="34" height="22" rx="4"/><path d="M4 38h40"/></svg></div>
+      <span className="aaf-badge">In progress</span>
+      <h3>Deployment</h3>
+      <p>Your laptop, your cloud or a dedicated server.</p>
+    </li>
+    <li className="aaf-topic" id="working-with-us">
+      <div className="aaf-topic-frame"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 12h32v19H23l-9 7v-7H8Z"/></svg></div>
+      <span className="aaf-badge">In progress</span>
+      <h3>Working with us</h3>
+      <p>Getting started, and answers to common questions.</p>
+    </li>
+  </ul>
+  <div className="aaf-col aaf-paddles">
+    <button type="button" className="aaf-paddle" data-dir="-1" aria-label="Previous"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M20.5 12.5 15 18l5.5 5.5"/></svg></button>
+    <button type="button" className="aaf-paddle" data-dir="1" aria-label="Next"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="m15.5 12.5 5.5 5.5-5.5 5.5"/></svg></button>
+  </div>
+</section>
+
+<section className="aaf-index" aria-labelledby="aaf-index-title">
+  <div className="aaf-col">
+    <h2 className="aaf-hub-headline" id="aaf-index-title">Explore Documentation</h2>
+    <div className="aaf-index-cols">
+      <div>
+        <p className="aaf-index-title">Products</p>
+        <ul className="aaf-index-lead">
+          <li><a href="#lifeos">LifeOS</a></li>
+          <li><a href="#living-office">The Living Office</a></li>
+          <li><a href="#apps">Apps</a></li>
+        </ul>
+      </div>
+      <div>
+        <p className="aaf-index-title">Topics</p>
+        <ul>
+          <li><a href="#architecture">Architecture</a></li>
+          <li><a href="#security">Security</a></li>
+          <li><a href="#guardrails">Guardrails</a></li>
+          <li><a href="#deployment">Deployment</a></li>
+          <li><a href="#working-with-us">Working with us</a></li>
+        </ul>
+      </div>
+      <div>
+        <p className="aaf-index-title">More from the Foundation</p>
+        <ul>
+          <li><a href="https://appliedaifoundation.org/demo">Contact us</a></li>
+          <li><a href="https://appliedaifoundation.org/plans.html">Plans</a></li>
+          <li><a href="https://appliedaifoundation.org/about.html">About</a></li>
+          <li><a href="https://appliedaifoundation.org">appliedaifoundation.org</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div className="aaf-footer">
+  <div className="aaf-footer-col">
     <p>Applied AI Foundation. Maintained by MetaWeave · <a href="https://metaweave.in">meet the people ↗</a></p>
   </div>
 </div>

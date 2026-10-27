@@ -334,112 +334,192 @@ html.dark .card { background: var(--aaf-alt) !important; }
   .card:hover { transform: none; }
 }
 
-/* ---------- the docs home: an Apple index page (custom mode) ---------- */
+/* ---------- the docs home: an apple.com product hub (custom mode) ----------
+   Ribbon, the bare title with a chapternav, the priority router, a topic rail, the index section, the footer.
+   Numbers from the apple-website-design-skill: pages/product-hubs.md, chrome.md, galleries.md, controls.md. */
 body:has(#navbar.is-custom) #content, body:has(#navbar.is-custom) #content-area { max-width: none !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
-.aaf-landing { color: var(--aaf-ink); font-family: var(--font-sans); width: 100%; }
-.aaf-landing a { text-decoration: none !important; }
-.aaf-wrap { width: 87.5%; max-width: 980px; margin: 0 auto; }
-.aaf-hero { background: var(--aaf-alt); padding: 104px 0 96px; }
-.aaf-hero-grid { display: grid; grid-template-columns: 1fr 240px; gap: 56px; align-items: center; }
-.aaf-eyebrow { margin: 0; font: 600 21px/1.19048 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink); }
-.aaf-hero-title { margin: 10px 0 0; font: 600 64px/1.0625 var(--font-display); letter-spacing: -.009em; color: var(--aaf-ink); }
-.aaf-hero-intro { margin: 20px 0 0; max-width: 600px; font: 600 21px/1.38105 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink-2); }
-.aaf-hero-links { margin: 26px 0 0; font-size: 21px; }
-.aaf-hero-mark { width: 240px; height: 240px; margin: 0 !important; border: 0 !important; }
-.aaf-more { color: var(--aaf-link) !important; font-weight: 400; letter-spacing: -.022em; }
-.aaf-more::after { content: "\2009\203A"; }
-.aaf-more.aaf-ext::after { content: "\2009\2197"; font-size: .85em; }
-a.aaf-more:hover, .aaf-tile:hover .aaf-more { text-decoration: underline !important; text-underline-offset: .12em; }
-.aaf-section { padding: 100px 0; }
-.aaf-on-white { background: var(--aaf-ground); }
-.aaf-on-grey { background: var(--aaf-alt); }
-.aaf-headline { margin: 0; font: 600 40px/1.1 var(--font-display); letter-spacing: 0; color: var(--aaf-ink); border: 0 !important; padding: 0 !important; }
-.aaf-intro { margin: 20px 0 0; max-width: 760px; font: 600 21px/1.38105 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink-2); }
-.aaf-intro b { color: var(--aaf-ink); font-weight: 600; }
-.aaf-links { margin: 24px 0 0; font-size: 17px; }
-.aaf-tiles { display: grid; gap: 20px; margin-top: 40px; }
-.aaf-four { grid-template-columns: repeat(4, 1fr); }
-.aaf-two { grid-template-columns: repeat(2, 1fr); }
-.aaf-tile {
-  display: flex; flex-direction: column; gap: 8px; min-height: 220px;
-  padding: 30px 30px 28px; border-radius: 18px;
-  background: var(--aaf-alt); color: var(--aaf-ink) !important;
-  transition: transform .3s var(--aaf-ease-hover);
+.aaf-hub {
+  --hub-head: #ffffff; --hub-router: #ffffff; --hub-lineup: #f5f5f7; --hub-frame: #ffffff; --hub-index: rgb(250, 250, 252); --hub-foot: #f5f5f7;
+  --hub-cn-label: rgba(0, 0, 0, .8); --hub-cn-hover: #000; --hub-index-lead: rgb(51, 51, 54); --hub-foot-ink: rgba(0, 0, 0, .72);
+  --hub-scrim: #e8e8ed; --hub-dot: rgba(0, 0, 0, .42); --hub-dot-on: rgba(0, 0, 0, .8); --hub-chip-ink: rgba(0, 0, 0, .56);
+  --hub-paddle: rgba(210, 210, 215, .64); --hub-paddle-hover: hsla(240, 7%, 88%, .7); --hub-paddle-ink: rgba(0, 0, 0, .56);
+  --hub-badge: #b64400;
+  color: var(--aaf-ink); font-family: var(--font-sans); width: 100%; background: var(--hub-head);
 }
-.aaf-on-grey .aaf-tile { background: var(--aaf-ground); }
-.aaf-tile:hover { transform: scale(1.016); }
-.aaf-tile h3 { margin: 0; font: 600 21px/1.19048 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink); }
-.aaf-tile p { margin: 0; font-size: 17px; line-height: 1.47059; letter-spacing: -.022em; color: var(--aaf-ink-2); }
-.aaf-tile .aaf-more { margin-top: auto; padding-top: 12px; font-size: 17px; }
-.aaf-keylines { list-style: none; margin: 36px 0 0; padding: 0; max-width: 760px; }
-.aaf-keylines li { display: grid; grid-template-columns: 220px 1fr; gap: 24px; padding: 18px 0; border-top: 1px solid var(--aaf-hair); font-size: 17px; line-height: 1.47059; letter-spacing: -.022em; }
-.aaf-keylines li:last-child { border-bottom: 1px solid var(--aaf-hair); }
-.aaf-keylines b { font: 600 21px/1.19048 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink); }
-.aaf-keylines span { color: var(--aaf-ink-2); }
+html.dark .aaf-hub {
+  --hub-head: rgb(22, 22, 23); --hub-router: rgb(22, 22, 23); --hub-lineup: #000; --hub-frame: #1d1d1f; --hub-index: rgb(22, 22, 23); --hub-foot: #1d1d1f;
+  --hub-cn-label: rgba(255, 255, 255, .8); --hub-cn-hover: #fff; --hub-index-lead: #f5f5f7; --hub-foot-ink: rgba(255, 255, 255, .72);
+  --hub-scrim: rgb(51, 51, 54); --hub-dot: rgba(255, 255, 255, .36); --hub-dot-on: rgba(255, 255, 255, .8); --hub-chip-ink: rgba(255, 255, 255, .8);
+  --hub-paddle: rgb(51, 51, 54); --hub-paddle-hover: #37373a; --hub-paddle-ink: rgba(255, 255, 255, .8);
+  --hub-badge: #ff791b;
+}
+.aaf-hub a { text-decoration: none !important; }
+.aaf-hub ul { list-style: none; margin: 0; padding: 0; }
+.aaf-hub li { margin: 0; padding: 0; }
+.aaf-hub img { margin: 0 !important; border: 0 !important; }
+.aaf-col { width: 87.5%; max-width: 1260px; margin: 0 auto; }
+.aaf-hub button { font: inherit; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.aaf-hub button:focus-visible, .aaf-hub a:focus-visible { outline: 2px solid var(--aaf-blue); outline-offset: 3px; }
+
+/* ribbon: one line, 14px, #f5f5f7, one link with a chevron */
+.aaf-ribbon { background: var(--aaf-alt); padding: 16px 0; }
+.aaf-ribbon p { width: 83.333%; min-width: 320px; margin: 0 auto; text-align: center; font-size: 14px; line-height: 1.42859; letter-spacing: -.016em; color: var(--aaf-ink); }
+.aaf-ribbon a { color: var(--aaf-link) !important; white-space: nowrap; }
+.aaf-ribbon a:hover { text-decoration: underline !important; }
+
+/* title and chapternav: the bare word at 80, then a row of icons with 12px labels */
+.aaf-hub-head { background: var(--hub-head); padding-top: 52px; }
+.aaf-hub-title { margin: 0; font: 600 80px/1.05 var(--font-display); letter-spacing: -.015em; color: var(--aaf-ink); }
+.aaf-chapternav { margin-top: 40px; padding: 16px 0; overflow: hidden; }
+.aaf-hub .aaf-chapternav ul { display: flex; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; padding: 0 6.25%; }
+.aaf-chapternav ul::-webkit-scrollbar { display: none; }
+.aaf-chapternav li:first-child { margin-left: auto; } .aaf-chapternav li:last-child { margin-right: auto; }
+.aaf-chapternav li { flex: none; animation: aaf-cn-in .35s cubic-bezier(.4, 0, .6, 1) backwards; }
+.aaf-chapternav li:nth-child(2) { animation-delay: .04s; } .aaf-chapternav li:nth-child(3) { animation-delay: .08s; }
+.aaf-chapternav li:nth-child(4) { animation-delay: .12s; } .aaf-chapternav li:nth-child(5) { animation-delay: .16s; }
+.aaf-chapternav li:nth-child(6) { animation-delay: .2s; } .aaf-chapternav li:nth-child(7) { animation-delay: .24s; }
+.aaf-chapternav li:nth-child(8) { animation-delay: .28s; }
+@keyframes aaf-cn-in { from { opacity: 0; transform: translateX(160px); } }
+.aaf-chapternav a { display: flex; flex-direction: column; align-items: center; min-width: 87px; padding: 0 20px; color: var(--hub-cn-label) !important; transition: color .2s cubic-bezier(.4, 0, .6, 1); }
+.aaf-chapternav a:hover { color: var(--hub-cn-hover) !important; }
+.aaf-cn-icon { height: 56px; display: flex; align-items: flex-end; justify-content: center; }
+.aaf-cn-icon svg { width: 44px; height: 44px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.aaf-cn-icon img { width: 50px; height: 50px; }
+.aaf-cn-label { margin-top: 4px; font-size: 12px; line-height: 1.33337; letter-spacing: -.01em; white-space: nowrap; }
+
+/* priority router: full-column media cards, name and tagline top-left, the button top-right, the next card peeking */
+.aaf-router { background: var(--hub-router); padding: 24px 0 0; }
+.aaf-hub .aaf-router-track {
+  display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  padding: 0 max(6.25%, calc((100% - 1260px) / 2)); scroll-padding-inline: max(6.25%, calc((100% - 1260px) / 2));
+}
+.aaf-router-track::-webkit-scrollbar { display: none; }
+.aaf-router-card { position: relative; flex: 0 0 100%; height: 680px; border-radius: 28px; overflow: hidden; scroll-snap-align: start; scroll-margin-top: 80px; }
+.aaf-dark { background: #000; color: #f5f5f7; }
+.aaf-light { background: #f5f5f7; color: #1d1d1f; }
+.aaf-router-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 100%; }
+.aaf-router-img.aaf-m { display: none; }
+.aaf-router-copy { position: absolute; top: 48px; left: 48px; max-width: 520px; }
+.aaf-router-copy h2 { margin: 0; font: 600 48px/1.08349 var(--font-display); letter-spacing: -.003em; color: inherit; border: 0; padding: 0; }
+.aaf-router-copy p { margin: 4px 0 0; font: 400 28px/1.14286 var(--font-display); letter-spacing: .007em; color: inherit; }
+.aaf-router-ctas { position: absolute; top: 50px; right: 48px; display: flex; align-items: center; gap: 24px; }
+.aaf-pill { display: inline-block; padding: 11px 21px; border-radius: 980px; background: var(--aaf-blue); color: #fff !important; font-size: 17px; line-height: 1.17648; letter-spacing: -.022em; transition: background-color .1s linear; }
+.aaf-pill:hover { background: var(--aaf-blue-hover); }
+.aaf-status { font-size: 14px; line-height: 1.42859; letter-spacing: -.016em; color: #6e6e73; }
+.aaf-dark .aaf-status { color: #86868b; }
+
+/* dot pill and play chip under the cards; the current dot stretches into a 6.25s timer */
+.aaf-dotnav { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 28px; }
+.aaf-dots { display: flex; align-items: center; height: 56px; padding: 0 20px; border-radius: 28px; background: var(--hub-scrim); }
+.aaf-dots button { position: relative; width: 8px; height: 8px; margin: 0 8px; padding: 0; border-radius: 4px; background: var(--hub-dot); overflow: hidden; transition: width .5s cubic-bezier(.4, 0, .6, 1), background-color .2s; }
+.aaf-dots button:hover { background: rgba(0, 0, 0, .54); }
+html.dark .aaf-dots button:hover { background: rgba(255, 255, 255, .48); }
+.aaf-dots button[aria-selected="true"] { width: 48px; background: var(--hub-dot); }
+.aaf-dots button span { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--hub-dot-on); border-radius: 4px; }
+.aaf-dots button[aria-selected="true"] span { width: 100%; }
+.aaf-dots button.is-timing span { width: 0; animation: aaf-dot-fill 6.25s linear forwards; }
+.aaf-router.is-paused .aaf-dots button.is-timing span { animation-play-state: paused; }
+@keyframes aaf-dot-fill { to { width: 100%; } }
+.aaf-play { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--hub-scrim); color: var(--hub-chip-ink); transition: color .1s linear; }
+.aaf-play:hover { color: var(--aaf-ink); }
+.aaf-play svg { width: 16px; height: 16px; }
+.aaf-i-pause { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.aaf-i-play { fill: currentColor; display: none; }
+.aaf-router.is-paused .aaf-i-pause { display: none; }
+.aaf-router.is-paused .aaf-i-play { display: block; }
+.aaf-hub:not(.aaf-js) .aaf-dotnav { visibility: hidden; }
+
+/* topic rail: 372px tiles, a frame, the orange badge, name 28, one line; paddles bottom-right */
+.aaf-lineup { background: var(--hub-lineup); padding: 144px 0; margin-top: 144px; }
+.aaf-hub-headline { margin: 0; font: 600 48px/1.08349 var(--font-display); letter-spacing: -.003em; color: var(--aaf-ink); border: 0; padding: 0; }
+.aaf-rail {
+  display: flex; gap: 20px; margin-top: 48px !important; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  padding: 0 max(6.25%, calc((100% - 1260px) / 2)) !important; scroll-padding-inline: max(6.25%, calc((100% - 1260px) / 2));
+}
+.aaf-rail::-webkit-scrollbar { display: none; }
+.aaf-topic { flex: 0 0 372px; scroll-snap-align: start; scroll-margin-top: 120px; }
+.aaf-topic-frame { height: 260px; border-radius: 28px; background: var(--hub-frame); display: grid; place-items: center; margin-bottom: 24px; }
+.aaf-topic-frame svg { width: 96px; height: 96px; fill: none; stroke: var(--aaf-ink); stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
+.aaf-badge { display: block; font: 600 12px/1.33337 var(--font-sans); letter-spacing: -.01em; color: var(--hub-badge); }
+.aaf-topic h3 { margin: 6px 0 0; font: 600 28px/1.14286 var(--font-display); letter-spacing: .007em; color: var(--aaf-ink); }
+.aaf-topic p { margin: 10px 0 0; max-width: 320px; font-size: 17px; line-height: 1.47059; letter-spacing: -.022em; color: var(--aaf-ink-2); }
+.aaf-paddles { display: flex; justify-content: flex-end; gap: 18px; margin-top: 40px; }
+.aaf-lineup.aaf-fits .aaf-paddles, .aaf-hub:not(.aaf-js) .aaf-paddles { display: none; }
+.aaf-paddle { width: 36px; height: 36px; padding: 0; border-radius: 50%; background: var(--hub-paddle); color: var(--hub-paddle-ink); transition: background .1s linear, color .1s linear, opacity .1s linear; }
+.aaf-paddle:hover:not(:disabled) { background: var(--hub-paddle-hover); }
+.aaf-paddle:disabled { opacity: .42; cursor: default; }
+.aaf-paddle svg { width: 36px; height: 36px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* index section: the word, then three columns of bold links */
+.aaf-index { background: var(--hub-index); padding: 112px 0; }
+.aaf-index-cols { display: grid; grid-template-columns: 3fr 2fr 7fr; margin-top: 40px; }
+.aaf-index-title { margin: 0 0 14px; font-size: 17px; line-height: 1.23536; letter-spacing: -.022em; color: var(--aaf-ink-2); }
+.aaf-index li { margin-bottom: 14px; }
+.aaf-index li a { font: 600 17px/1.23536 var(--font-sans); letter-spacing: -.022em; color: var(--aaf-ink) !important; }
+.aaf-index .aaf-index-lead li { margin-bottom: 11px; }
+.aaf-index .aaf-index-lead li a { font: 600 28px/1.14286 var(--font-display); letter-spacing: .007em; color: var(--hub-index-lead) !important; }
+.aaf-index li a:hover { text-decoration: underline !important; text-underline-offset: .12em; }
+
+/* footer: 12px on #f5f5f7, a 980 column */
+.aaf-footer { background: var(--hub-foot); padding: 17px 0 21px; }
+.aaf-footer-col { width: 87.5%; max-width: 980px; margin: 0 auto; }
+.aaf-footer p { margin: 0; font-size: 12px; line-height: 1.33337; letter-spacing: -.01em; color: var(--hub-foot-ink); }
+.aaf-footer a { color: var(--hub-foot-ink) !important; }
+.aaf-footer a:hover { text-decoration: underline !important; }
+
 @media (max-width: 1068px) {
-  .aaf-hero-title { font-size: 56px; line-height: 1.07143; letter-spacing: -.005em; }
-  .aaf-four { grid-template-columns: repeat(2, 1fr); }
-  .aaf-section { padding: 80px 0; }
-  .aaf-headline { font-size: 32px; line-height: 1.125; letter-spacing: .004em; }
+  .aaf-hub-title { font-size: 64px; line-height: 1.0625; letter-spacing: -.009em; }
+  .aaf-hub .aaf-chapternav ul::after { content: ""; flex: none; width: 1px; }
+  .aaf-router { padding-top: 32px; }
+  .aaf-router-card { height: 628px; }
+  .aaf-router-copy { top: 40px; left: 40px; }
+  .aaf-router-copy h2 { font-size: 40px; line-height: 1.1; letter-spacing: 0; }
+  .aaf-router-copy p { font-size: 24px; line-height: 1.16667; letter-spacing: .009em; }
+  .aaf-router-ctas { top: 40px; right: 40px; }
+  .aaf-lineup { padding: 120px 0; margin-top: 120px; }
+  .aaf-hub-headline { font-size: 40px; line-height: 1.1; letter-spacing: 0; }
+  .aaf-topic { flex-basis: 344px; }
+  .aaf-index { padding: 96px 0; }
+  .aaf-index-cols { grid-template-columns: 4fr 3fr 5fr; }
+  .aaf-index .aaf-index-lead li a { font-size: 24px; line-height: 1.16667; letter-spacing: .009em; }
 }
 @media (max-width: 734px) {
-  .aaf-hero { padding: 64px 0 56px; }
-  .aaf-hero-grid { grid-template-columns: 1fr; gap: 32px; }
-  .aaf-hero-mark { width: 120px; height: 120px; order: -1; }
-  .aaf-hero-title { font-size: 40px; line-height: 1.1; letter-spacing: 0; }
-  .aaf-hero-intro, .aaf-intro { font-size: 19px; line-height: 1.42115; letter-spacing: .012em; }
-  .aaf-four, .aaf-two { grid-template-columns: 1fr; }
-  .aaf-section { padding: 64px 0; }
-  .aaf-headline { font-size: 28px; line-height: 1.14286; letter-spacing: .007em; }
-  .aaf-tile { min-height: 0; }
-  .aaf-keylines li { grid-template-columns: 1fr; gap: 4px; }
+  .aaf-ribbon p { width: 87.5%; min-width: 0; }
+  .aaf-hub-head { padding-top: 36px; }
+  .aaf-hub-title { font-size: 48px; line-height: 1.08349; letter-spacing: -.003em; }
+  .aaf-chapternav { margin-top: 24px; }
+  .aaf-chapternav a { min-width: 0; padding: 0 12px; }
+  .aaf-chapternav li:first-child a { padding-left: 0; }
+  .aaf-router { padding-top: 16px; }
+  .aaf-router-track { gap: 12px; }
+  .aaf-router-card { flex-basis: calc(100% - 20px); height: 480px; border-radius: 18px; }
+  .aaf-router-img { display: none; }
+  .aaf-router-img.aaf-m { display: block; }
+  .aaf-router-copy { top: 28px; left: 24px; right: 24px; }
+  .aaf-router-copy h2 { font-size: 28px; line-height: 1.14286; letter-spacing: .007em; }
+  .aaf-router-copy p { font-size: 19px; line-height: 1.21053; letter-spacing: .012em; }
+  .aaf-router-ctas { top: auto; bottom: 24px; right: auto; left: 24px; gap: 16px; }
+  .aaf-pill { padding: 8px 16px; font-size: 14px; line-height: 1.28577; letter-spacing: -.016em; }
+  .aaf-status { font-size: 12px; line-height: 1.33337; letter-spacing: -.01em; }
+  .aaf-dotnav { margin-top: 20px; }
+  .aaf-dots button[aria-selected="true"] { width: 32px; }
+  .aaf-lineup { padding: 80px 0; margin-top: 80px; }
+  .aaf-hub-headline { font-size: 32px; line-height: 1.125; letter-spacing: .004em; }
+  .aaf-rail { margin-top: 32px !important; gap: 12px; }
+  .aaf-topic { flex-basis: 280px; }
+  .aaf-topic-frame { height: 200px; border-radius: 18px; }
+  .aaf-topic-frame svg { width: 80px; height: 80px; }
+  .aaf-topic h3 { font-size: 24px; line-height: 1.16667; letter-spacing: .009em; }
+  .aaf-index { padding: 56px 0; }
+  .aaf-index-cols { grid-template-columns: 1fr; row-gap: 32px; margin-top: 28px; }
+  .aaf-index .aaf-index-lead li a { font-size: 21px; line-height: 1.19048; letter-spacing: .011em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aaf-chapternav li { animation: none; }
+  .aaf-dots button { transition: none; }
 }
 
-/* ---------- the Welcome page: Apple's developer-docs landing (title band, overview, topics) ---------- */
-.aaf-dev .aaf-wrap { max-width: 980px; }
-.aaf-dev-band { background: var(--aaf-alt); padding: 88px 0 72px; }
-.aaf-dev-band-grid { display: grid; grid-template-columns: 1fr 180px; gap: 48px; align-items: center; }
-.aaf-dev-title { margin: 8px 0 0; font: 600 64px/1.0625 var(--font-display); letter-spacing: -.009em; color: var(--aaf-ink); }
-.aaf-dev-abstract { margin: 16px 0 0; max-width: 640px; font: 600 21px/1.38105 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink-2); }
-.aaf-dev-availability { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 0; padding: 0; }
-.aaf-dev-availability li { margin: 0; padding: 5px 12px; border-radius: 980px; background: var(--aaf-ground); font-size: 12px; line-height: 1.33337; letter-spacing: -.01em; color: var(--aaf-ink-2); }
-.aaf-dev-mark { width: 180px; height: 180px; margin: 0 !important; border: 0 !important; justify-self: end; }
-.aaf-dev-section { padding: 64px 0 0; }
-.aaf-dev-section:last-of-type { padding-bottom: 96px; }
-.aaf-dev-h2 { margin: 0 0 24px; padding-bottom: 14px; border-bottom: 1px solid var(--aaf-hair); font: 600 32px/1.125 var(--font-display); letter-spacing: .004em; color: var(--aaf-ink); }
-.aaf-dev-copy { max-width: 760px; }
-.aaf-dev-copy p { margin: 0 0 .8em; font-size: 17px; line-height: 1.47059; letter-spacing: -.022em; color: var(--aaf-ink); }
-.aaf-dev-copy .aaf-dev-note { margin-top: 1.4em; font-size: 14px; line-height: 1.42859; letter-spacing: -.016em; color: var(--aaf-ink-2); }
-.aaf-dev-links { display: flex; flex-wrap: wrap; gap: 8px 30px; margin-top: 20px !important; }
-.aaf-dev-topics { list-style: none; margin: 0; padding: 0; }
-.aaf-dev-topics li {
-  display: grid; grid-template-columns: 40px 1fr auto; gap: 18px; align-items: start;
-  margin: 0; padding: 20px 0; border-bottom: 1px solid var(--aaf-hair);
-}
-.aaf-dev-glyph { width: 40px; height: 40px; border-radius: 10px; background: var(--aaf-alt); display: grid; place-items: center; }
-.aaf-dev-glyph svg { width: 22px; height: 22px; fill: none; stroke: var(--aaf-blue); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.aaf-dev-topics h3 { margin: 0; font: 600 21px/1.19048 var(--font-display); letter-spacing: .011em; color: var(--aaf-ink); }
-.aaf-dev-topics p { margin: 6px 0 0; font-size: 17px; line-height: 1.47059; letter-spacing: -.022em; color: var(--aaf-ink-2); }
-/* Apple's badge: orange text on a faint orange fill, radius 6 */
-.aaf-badge { align-self: center; padding: 4px 8px; border-radius: 6px; background: rgba(245, 99, 0, .1); color: #b64400; font: 600 12px/1.33337 var(--font-sans); letter-spacing: -.01em; white-space: nowrap; }
-html.dark .aaf-badge { background: rgba(245, 99, 0, .2); color: #ff791b; }
-.aaf-dev-foot { padding: 28px 0 40px; border-top: 1px solid var(--aaf-hair); }
-.aaf-dev-foot p { margin: 0; font-size: 12px; line-height: 1.33337; letter-spacing: -.01em; color: var(--aaf-ink-2); }
-.aaf-dev-foot a { color: var(--aaf-ink-2) !important; } .aaf-dev-foot a:hover { color: var(--aaf-ink) !important; }
-@media (max-width: 1068px) { .aaf-dev-title { font-size: 56px; line-height: 1.07143; letter-spacing: -.005em; } .aaf-dev-h2 { font-size: 28px; line-height: 1.14286; letter-spacing: .007em; } }
-@media (max-width: 734px) {
-  .aaf-dev-band { padding: 56px 0 48px; }
-  .aaf-dev-band-grid { grid-template-columns: 1fr; gap: 24px; }
-  .aaf-dev-mark { width: 96px; height: 96px; justify-self: start; order: -1; }
-  .aaf-dev-title { font-size: 40px; line-height: 1.1; letter-spacing: 0; }
-  .aaf-dev-abstract { font-size: 19px; line-height: 1.42115; letter-spacing: .012em; }
-  .aaf-dev-section { padding-top: 48px; }
-  .aaf-dev-h2 { font-size: 24px; line-height: 1.16667; letter-spacing: .009em; }
-  .aaf-dev-topics li { grid-template-columns: 36px 1fr; }
-  .aaf-dev-topics .aaf-badge { grid-column: 2; justify-self: start; }
-}
-
-/* one page needs no phone menu or breadcrumb; pull the band up to the bar */
+/* one page needs no phone menu or breadcrumb; pull the ribbon up to the bar */
 @media (max-width: 1023px) {
   #navbar.is-custom button[class*="h-14"][class*="lg:hidden"] { display: none !important; }
   body:has(#navbar.is-custom) #content-area { margin-top: -56px !important; }
