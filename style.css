@@ -360,6 +360,7 @@ html.dark .aaf-hub {
 .aaf-col { width: 87.5%; max-width: 1260px; margin: 0 auto; }
 .aaf-hub button { font: inherit; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .aaf-hub button:focus-visible, .aaf-hub a:focus-visible { outline: 2px solid var(--aaf-blue); outline-offset: 3px; }
+.aaf-hub [tabindex="-1"]:focus { outline: none; }
 
 /* ribbon: one line, 14px, #f5f5f7, one link with a chevron */
 .aaf-ribbon { background: var(--aaf-alt); padding: 16px 0; }
@@ -398,7 +399,6 @@ html.dark .aaf-hub {
 .aaf-dark { background: #000; color: #f5f5f7; }
 .aaf-light { background: #f5f5f7; color: #1d1d1f; }
 .aaf-router-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 100%; }
-.aaf-router-img.aaf-m { display: none; }
 .aaf-router-copy { position: absolute; top: 48px; left: 48px; max-width: 520px; }
 .aaf-router-copy h2 { margin: 0; font: 600 48px/1.08349 var(--font-display); letter-spacing: -.003em; color: inherit; border: 0; padding: 0; }
 .aaf-router-copy p { margin: 4px 0 0; font: 400 28px/1.14286 var(--font-display); letter-spacing: .007em; color: inherit; }
@@ -493,8 +493,6 @@ html.dark .aaf-dots button:hover { background: rgba(255, 255, 255, .48); }
   .aaf-router { padding-top: 16px; }
   .aaf-router-track { gap: 12px; }
   .aaf-router-card { flex-basis: calc(100% - 20px); height: 480px; border-radius: 18px; }
-  .aaf-router-img { display: none; }
-  .aaf-router-img.aaf-m { display: block; }
   .aaf-router-copy { top: 28px; left: 24px; right: 24px; }
   .aaf-router-copy h2 { font-size: 28px; line-height: 1.14286; letter-spacing: .007em; }
   .aaf-router-copy p { font-size: 19px; line-height: 1.21053; letter-spacing: .012em; }

@@ -39,8 +39,10 @@ mode: "custom"
 <section className="aaf-router" aria-label="Products" data-aaf-slideshow>
   <ul className="aaf-router-track">
     <li className="aaf-router-card aaf-dark" id="lifeos">
-      <img className="aaf-router-img" src="/images/hub/lifeos.jpg" alt="An iPhone showing a LifeOS chat in which a new team, Home and Family, is set up with three agents." noZoom />
-      <img className="aaf-router-img aaf-m" src="/images/hub/lifeos-m.jpg" alt="" noZoom />
+      <picture>
+        <source media="(max-width: 734px)" srcSet="/images/hub/lifeos-m.jpg" />
+        <img className="aaf-router-img" src="/images/hub/lifeos.jpg" alt="An iPhone showing a LifeOS chat in which a new team, Home and Family, is set up with three agents." noZoom />
+      </picture>
       <div className="aaf-router-copy">
         <h2>LifeOS</h2>
         <p>Never start from zero.</p>
@@ -51,8 +53,10 @@ mode: "custom"
       </div>
     </li>
     <li className="aaf-router-card aaf-light" id="apps">
-      <img className="aaf-router-img" src="/images/hub/apps.jpg" alt="A suite of dashboards: revenue, customer lifetime, growth, acquisition cost and where the time goes." noZoom />
-      <img className="aaf-router-img aaf-m" src="/images/hub/apps-m.jpg" alt="" noZoom />
+      <picture>
+        <source media="(max-width: 734px)" srcSet="/images/hub/apps-m.jpg" />
+        <img className="aaf-router-img" src="/images/hub/apps.jpg" alt="A suite of dashboards: revenue, customer lifetime, growth, acquisition cost and where the time goes." noZoom />
+      </picture>
       <div className="aaf-router-copy">
         <h2>Apps</h2>
         <p>The apps we run today.</p>
@@ -63,8 +67,10 @@ mode: "custom"
       </div>
     </li>
     <li className="aaf-router-card aaf-dark" id="living-office">
-      <img className="aaf-router-img" src="/images/hub/office.jpg" alt="The Living Office drawing in mail, portals, files, reports, exports and photos." noZoom />
-      <img className="aaf-router-img aaf-m" src="/images/hub/office-m.jpg" alt="" noZoom />
+      <picture>
+        <source media="(max-width: 734px)" srcSet="/images/hub/office-m.jpg" />
+        <img className="aaf-router-img" src="/images/hub/office.jpg" alt="The Living Office drawing in mail, portals, files, reports, exports and photos." noZoom />
+      </picture>
       <div className="aaf-router-copy">
         <h2>The Living Office</h2>
         <p>Where your memory lives.</p>

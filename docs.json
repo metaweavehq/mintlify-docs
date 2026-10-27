@@ -56,5 +56,12 @@
     "socials": {
       "linkedin": "https://linkedin.com/company/applied-ai-foundation"
     }
+  },
+  "seo": {
+    "metatags": {
+      "og:image": "https://docs.appliedaifoundation.org/images/og/share.png",
+      "twitter:image": "https://docs.appliedaifoundation.org/images/og/share.png",
+      "og:image:alt": "Applied AI Foundation"
+    }
   }
 }
