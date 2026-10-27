@@ -1,33 +1,7 @@
-> **First-time setup**: Customize this file for your project. Prompt the user to customize this file for their project.
-> For Mintlify product knowledge (components, configuration, writing standards),
-> install the Mintlify skill: `npx skills add https://mintlify.com/docs`
-
 # Documentation project instructions
 
-## About this project
-
-- This is a documentation site built on [Mintlify](https://mintlify.com)
-- Pages are MDX files with YAML frontmatter
-- Configuration lives in `docs.json`
-- Run `mint dev` to preview locally
-- Run `mint broken-links` to check links
-
-## Terminology
-
-<!-- Add product-specific terms and preferred usage -->
-<!-- Example: Use "workspace" not "project", "member" not "user" -->
-
-## Style preferences
-
-<!-- Add any project-specific style rules below -->
-
-- Use active voice and second person ("you")
-- Keep sentences concise — one idea per sentence
-- Use sentence case for headings
-- Bold for UI elements: Click **Settings**
-- Code formatting for file names, commands, paths, and code references
-
-## Content boundaries
-
-<!-- Define what should and shouldn't be documented -->
-<!-- Example: Don't document internal admin features -->
+- Mintlify site; pages are MDX with YAML frontmatter; settings in `docs.json`; design in `style.css`; the home page's rails and slow in-page scrolling in `hub.js` (Mintlify loads every root `.js` file on every page).
+- Preview with `npx mint dev`. A push to `main` publishes the live site.
+- The site is a single Welcome page while the docs are rewritten. Add a topic page only when its content has been reviewed (cloud, deployment and security by Suhail; agents, skills and guardrails by Prasanna) and Prashant has said go.
+- Write only what is built today; mark anything unfinished as "In progress".
+- No client names, logos, screenshots or numbers without that client's written OK. No "open source" or licence wording until Prashant clears it. No prices.
